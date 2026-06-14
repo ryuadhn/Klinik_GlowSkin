@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html class="light" lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Rekam Medis | GlowSkin Clinical Management</title>
+
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="../assets/js/theme-toggle.js"></script>
+    <link rel="stylesheet" href="../assets/css/style.css" />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#b7c8e1",
+              "on-primary-container": "#00423b",
+              "on-error-container": "#93000a",
+              "outline": "var(--outline)",
+              "background": "var(--surface)",
+              "primary-fixed": "#71f8e4",
+              "surface-container-low": "var(--surface-container-low)",
+              "on-tertiary-fixed": "#0b1c30",
+              "surface-variant": "var(--surface-container-highest)",
+              "on-tertiary-fixed-variant": "#38485d",
+              "on-secondary-container": "#fffbff",
+              "tertiary": "#505f76",
+              "inverse-primary": "#4fdbc8",
+              "on-primary-fixed-variant": "#005048",
+              "primary": "var(--primary)",
+              "on-tertiary": "#ffffff",
+              "surface-container-high": "var(--surface-container-high)",
+              "on-error": "#ffffff",
+              "on-surface": "var(--on-surface)",
+              "inverse-surface": "#2d3133",
+              "primary-container": "var(--primary-container)",
+              "surface-dim": "var(--surface-dim)",
+              "on-tertiary-container": "#2b3b50",
+              "on-secondary-fixed": "#40000d",
+              "outline-variant": "var(--outline-variant)",
+              "inverse-on-surface": "#eff1f3",
+              "secondary-fixed-dim": "#ffb2b7",
+              "primary-fixed-dim": "#4fdbc8",
+              "surface-container-lowest": "var(--surface-container-lowest)",
+              "on-surface-variant": "var(--on-surface-variant)",
+              "error-container": "#ffdad6",
+              "on-secondary": "#ffffff",
+              "error": "#ba1a1a",
+              "surface-bright": "var(--surface-lowest)",
+              "secondary": "#b90538",
+              "on-primary-fixed": "#00201c",
+              "secondary-fixed": "#ffdadb",
+              "secondary-container": "#dc2c4f",
+              "surface-container-highest": "var(--surface-container-highest)",
+              "surface-tint": "var(--primary)",
+              "surface-container": "var(--surface-container)",
+              "on-secondary-fixed-variant": "#92002a",
+              "surface": "var(--surface)",
+              "on-primary": "#ffffff",
+              "on-background": "#191c1e",
+              "tertiary-container": "#95a5be",
+              "tertiary-fixed": "#d3e4fe"
+            },
+            borderRadius: {
+              "DEFAULT": "0.125rem",
+              "lg": "0.25rem",
+              "xl": "0.5rem",
+              "full": "0.75rem"
+            },
+            spacing: {
+              "lg": "24px",
+              "container-max": "1440px",
+              "xs": "4px",
+              "sidebar-width": "260px",
+              "md": "16px",
+              "base": "4px",
+              "xl": "40px",
+              "sm": "8px"
+            },
+            fontFamily: {
+              "title-sm": ["Plus Jakarta Sans"],
+              "headline-md": ["Plus Jakarta Sans"],
+              "display-lg": ["Plus Jakarta Sans"],
+              "body-md": ["Plus Jakarta Sans"],
+              "label-caps": ["Plus Jakarta Sans"],
+              "display-lg-mobile": ["Plus Jakarta Sans"],
+              "body-sm": ["Plus Jakarta Sans"]
+            },
+            fontSize: {
+              "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+              "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+              "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+              "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+              "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+              "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+              "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+            }
+          },
+        },
+      }
+    </script>
+  </head>
+  <body class="bg-surface dark:bg-[#0f172a] text-on-surface dark:text-[#f1f5f9] font-body-md transition-colors duration-300">
+    <!-- SideNavBar Shell -->
+    <aside class="fixed h-full w-[260px] left-0 top-0 flex flex-col py-lg border-r border-outline-variant dark:border-slate-800 bg-surface-container-lowest dark:bg-[#0f172a] z-50">
+      <div class="px-lg mb-xl">
+        <h1 class="font-display-lg text-display-lg text-primary dark:text-primary-fixed-dim tracking-tight">GlowSkin</h1>
+        <p class="font-label-caps text-label-caps text-on-surface-variant/60 dark:text-slate-400 tracking-widest uppercase">Admin Console</p>
+      </div>
+
+      <nav class="flex-1 space-y-1">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="index.html">
+          <span class="material-symbols-outlined mr-3">dashboard</span>
+          <span class="font-label-caps text-label-caps">Ringkasan Dashboard</span>
+        </a>
+        <!-- Active Tab -->
+        <a class="group relative flex items-center px-lg py-3 text-primary dark:text-primary-fixed-dim font-bold border-l-4 border-primary dark:border-primary-fixed-dim bg-primary/5 transition-all duration-200" href="rekam-medis.html">
+          <span class="material-symbols-outlined mr-3">medical_services</span>
+          <span class="font-label-caps text-label-caps">Data Pasien &amp; Rekam Medis</span>
+        </a>
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="inventori.html">
+          <span class="material-symbols-outlined mr-3">inventory_2</span>
+          <span class="font-label-caps text-label-caps">Inventori Produk Skincare</span>
+        </a>
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="log-keamanan.html">
+          <span class="material-symbols-outlined mr-3">security</span>
+          <span class="font-label-caps text-label-caps">Log Keamanan Sistem</span>
+        </a>
+      </nav>
+
+      <div class="px-lg pt-lg mt-auto border-t border-outline-variant dark:border-slate-800">
+        <button id="btn-new-appointment" class="w-full py-3 px-4 bg-primary text-on-primary font-bold rounded-lg mb-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-[20px]">add</span>
+          <span class="font-label-caps text-label-caps">New Appointment</span>
+        </button>
+        <div class="space-y-1">
+          <a id="link-settings" class="flex items-center px-2 py-2 text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors" href="#">
+            <span class="material-symbols-outlined mr-3 text-[20px]">settings</span>
+            <span class="font-body-sm text-body-sm">Settings</span>
+          </a>
+          <a class="flex items-center px-2 py-2 text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors" href="../landing-page/index.html">
+            <span class="material-symbols-outlined mr-3 text-[20px]">logout</span>
+            <span class="font-body-sm text-body-sm">Keluar</span>
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="ml-[260px] min-h-screen flex flex-col">
+      <!-- TopNavBar Shell -->
+      <header class="fixed top-0 right-0 w-[calc(100%-260px)] h-16 bg-surface-container-lowest dark:bg-[#0f172a] border-b border-outline-variant dark:border-slate-800 flex justify-between items-center px-xl z-40">
+        <div class="flex items-center flex-1 max-w-md">
+          <div class="relative w-full rounded-lg">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-slate-400">search</span>
+            <input class="w-full pl-10 pr-4 py-2 bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg font-body-sm text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="Cari rekam medis atau pasien..." type="text" id="search-input" />
+          </div>
+        </div>
+
+        <div class="flex items-center gap-6 ml-lg">
+          <!-- Theme Toggle Button -->
+          <button class="relative text-on-surface-variant dark:text-slate-300 hover:text-primary transition-colors flex items-center" id="theme-toggle">
+            <span class="material-symbols-outlined hidden" id="dark-icon">light_mode</span>
+            <span class="material-symbols-outlined" id="light-icon">dark_mode</span>
+          </button>
+
+          <button class="relative text-on-surface-variant dark:text-slate-300 hover:text-primary transition-colors">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="absolute top-0 right-0 w-2 h-2 bg-secondary rounded-full border-2 border-surface-container-lowest dark:border-[#0f172a]"></span>
+          </button>
+
+          <div class="flex items-center gap-2 text-on-surface-variant dark:text-slate-300 bg-surface-container-low/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-outline-variant/30 dark:border-slate-800">
+            <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+            <span class="text-body-sm font-medium" id="current-date-display">13 Juni 2026</span>
+          </div>
+
+          <div class="h-8 w-px bg-outline-variant dark:bg-slate-800"></div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+              <p class="font-title-sm text-title-sm leading-none text-primary">Dr. Sarah Wijaya</p>
+              <p class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400">SUPER ADMIN</p>
+            </div>
+            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+              <img alt="Administrator Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M"/>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Canvas -->
+      <main class="mt-16 p-xl flex-1 max-w-[1440px] mx-auto w-full bg-background dark:bg-transparent">
+        <div class="max-w-7xl mx-auto space-y-lg">
+          <!-- Page Header & Actions -->
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+            <div>
+              <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface">Data Pasien &amp; Rekam Medis</h2>
+              <p class="font-body-md text-body-md text-on-surface-variant">Manajemen data riwayat klinis pasien secara real-time.</p>
+            </div>
+            <button class="flex items-center gap-xs border border-primary text-primary hover:bg-primary/10 dark:border-primary-fixed-dim dark:text-primary-fixed-dim dark:hover:bg-primary-fixed-dim/10 rounded-lg px-md py-1.5 font-medium text-xs transition-all shadow-sm">
+              <span class="material-symbols-outlined text-[16px]">print</span>
+              Cetak Laporan Bulanan
+            </button>
+          </div>
+
+          <!-- Filters & Stats Bento -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
+            <div class="col-span-1 md:col-span-3 bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant dark:border-slate-800 p-lg rounded-xl flex flex-wrap gap-md items-center shadow-sm">
+              <div class="flex flex-col gap-xs min-w-[200px]">
+                <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400">Periode Kunjungan</label>
+                <select class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-md py-sm text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary outline-none transition-all" id="filter-period">
+                  <option value="all">Semua Waktu</option>
+                  <option value="today">Hari Ini</option>
+                  <option value="week">7 Hari Terakhir</option>
+                  <option value="month">Bulan Ini</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-xs min-w-[200px]">
+                <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400">Kategori Layanan</label>
+                <select class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-md py-sm text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary outline-none transition-all" id="filter-service">
+                  <option value="all">Semua Layanan</option>
+                  <option value="facial">Facial Rejuvenation</option>
+                  <option value="laser">Laser Acne Removal</option>
+                  <option value="peeling">Chemical Peeling</option>
+                  <option value="consultation">Medical Consultation</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-xs min-w-[200px]">
+                <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400">Status</label>
+                <div class="flex gap-sm">
+                  <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-primary/10 text-primary dark:text-primary-fixed-dim border border-primary/20 transition-all" data-status="all">Semua</button>
+                  <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10 dark:hover:bg-primary-fixed-dim/20 hover:text-primary dark:hover:text-primary-fixed-dim transition-all border border-transparent" data-status="aktif">Aktif</button>
+                  <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10 dark:hover:bg-primary-fixed-dim/20 hover:text-primary dark:hover:text-primary-fixed-dim transition-all border border-transparent" data-status="selesai">Selesai</button>
+                </div>
+              </div>
+            </div>
+            <div class="bg-primary text-on-primary p-lg rounded-xl flex flex-col justify-between shadow-sm">
+              <span class="font-label-caps text-label-caps opacity-80 uppercase">Total Kunjungan Hari Ini</span>
+              <div class="flex items-end justify-between">
+                <span class="text-[32px] font-bold leading-none">142</span>
+                <span class="material-symbols-outlined text-[32px]">trending_up</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Data Table & Preview Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+            <!-- Data Table -->
+            <div class="lg:col-span-2 bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant dark:border-slate-800 rounded-xl overflow-hidden flex flex-col shadow-sm">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-surface-container-low dark:bg-slate-900 border-b border-outline-variant dark:border-slate-800">
+                      <th class="px-lg py-md font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Tanggal</th>
+                      <th class="px-lg py-md font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">ID &amp; Pasien</th>
+                      <th class="px-lg py-md font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Layanan</th>
+                      <th class="px-lg py-md font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Dokter</th>
+                      <th class="px-lg py-md font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-outline-variant/30 dark:divide-slate-800/50" id="record-table-body">
+                    <!-- Patient 1 -->
+                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row bg-primary/5 dark:bg-primary-fixed-dim/5 border-l-4 border-primary dark:border-primary-fixed-dim" data-service="facial" data-status="aktif" data-name="Siti Nurhaliza" data-id="GS-2023-0891" data-age="28" data-gender="Perempuan" data-blood="115/80 mmHg" data-allergy="Tidak Ada" data-date="12 Okt 2023 09:15 WIB" data-summary="Pasien mengeluhkan hiperpigmentasi ringan di area pipi. Dilakukan treatment Facial Rejuvenation tahap 2 dengan serum pencerah dosis rendah." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuBvRxKGLYp63qoH-1uiQcczc2VM0ucbHrcJBhD9BjtL6hUYIofyqaLCQfYM3kZVaRFOd6nABA2T0IfWx2r6j3QuxSR_P_1_nQumo_qN73Xuo9FND3o13HBAH0cC37ZzERjuBdFiknnS3-ZIsTNs881Mozh6mmp25tY0NiSoUv9NMndrXeWtNPKTlWJsqKYlbNXC7AlqjLzHpe4b7b71gV58Q5D45tQSi69cdLAQFSY2Q6zWcQO3BAld2t8bpgUe3Q7fbaWkxrmK8Aw">
+                      <td class="px-lg py-lg">
+                        <div class="flex flex-col">
+                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
+                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">09:15 WIB</span>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <div class="flex items-center gap-md">
+                          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold text-[12px] flex-shrink-0">SN</div>
+                          <div class="flex flex-col">
+                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Siti Nurhaliza</span>
+                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0891</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Facial Rejuvenation</span>
+                      </td>
+                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Amanda S.</td>
+                      <td class="px-lg py-lg text-right">
+                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
+                      </td>
+                    </tr>
+
+                    <!-- Patient 2 -->
+                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="laser" data-status="selesai" data-name="Budi Pratama" data-id="GS-2023-0902" data-age="32" data-gender="Laki-laki" data-blood="120/80 mmHg" data-allergy="Penisilin" data-date="12 Okt 2023 10:30 WIB" data-summary="Dilakukan tindakan Laser Acne Removal di area dahi dan pipi kiri. Pasien disarankan menggunakan sunscreen secara rutin." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuDTuebV9IcJrHnqW2CPVLedT7srbVq0D0Eo0IGtF11N7bmbOv3E04brMFsKjK5A546qprEBLtFM7jN812ebpqmi1Qv8g--FwDBvJoBnFTIxD8N-X8bAThuMg3p4FC-WWP5D0y4km5YqUermThvox-yelZ97HXTo9IfEmrftg1fnUNA5pZ4bqjZtZVgDtwVD4my_Rm1sNvJ_KDGJM-pzOJWWJRs8qAMfimiIKK4J-u5zD_YwjObe2zPehZsUrbRtk3koU-3CcL8Ckvk">
+                      <td class="px-lg py-lg">
+                        <div class="flex flex-col">
+                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
+                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">10:30 WIB</span>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <div class="flex items-center gap-md">
+                          <div class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-[12px] flex-shrink-0">BP</div>
+                          <div class="flex flex-col">
+                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Budi Pratama</span>
+                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0902</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Laser Acne Removal</span>
+                      </td>
+                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Kevin J.</td>
+                      <td class="px-lg py-lg text-right">
+                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
+                      </td>
+                    </tr>
+
+                    <!-- Patient 3 -->
+                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="peeling" data-status="selesai" data-name="Dewi Wijaya" data-id="GS-2023-0782" data-age="25" data-gender="Perempuan" data-blood="110/75 mmHg" data-allergy="Tidak Ada" data-date="12 Okt 2023 11:45 WIB" data-summary="Tindakan Chemical Peeling tingkat ringan menggunakan Glycolic Acid 10%. Kulit pasien tampak sedikit kemerahan, diberikan cream pasca-peeling." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuBS5BwY3H8kVhBv6vMb2O-IRhU4xcMOcMf0RsVaCPZQTSh0LyPTYHn-dGYzioJhrGFIqpbFbcyW_lEgFwJKKXUKdnscb-zL-1SkzFZsD6gdw12F2zvRBcKTPSHYKwGpGdXsY9C3UZp1ikqTV-boR2rI0cw356u1f_Zj4JpzdUVPIVVWAwqeZzexivqrSSwJtUYgUY0QHed28xWacjVzmCFaUq4IPr16OMUr5xwg8aPwa1Wmnpe_46NvfOTmmSCE4u-DLkksSCJXxfs">
+                      <td class="px-lg py-lg">
+                        <div class="flex flex-col">
+                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
+                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">11:45 WIB</span>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <div class="flex items-center gap-md">
+                          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold text-[12px] flex-shrink-0">DW</div>
+                          <div class="flex flex-col">
+                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Dewi Wijaya</span>
+                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0782</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Chemical Peeling</span>
+                      </td>
+                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Amanda S.</td>
+                      <td class="px-lg py-lg text-right">
+                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
+                      </td>
+                    </tr>
+
+                    <!-- Patient 4 -->
+                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="consultation" data-status="selesai" data-name="Rina Melati" data-id="GS-2023-1122" data-age="35" data-gender="Perempuan" data-blood="125/85 mmHg" data-allergy="Sulfa" data-date="11 Okt 2023 14:20 WIB" data-summary="Konsultasi awal keluhan flek hitam setelah paparan matahari. Diberikan resep krim malam khusus dan serum pencerah." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M">
+                      <td class="px-lg py-lg">
+                        <div class="flex flex-col">
+                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">11 Okt 2023</span>
+                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">14:20 WIB</span>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <div class="flex items-center gap-md">
+                          <div class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-[12px] flex-shrink-0">RM</div>
+                          <div class="flex flex-col">
+                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Rina Melati</span>
+                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-1122</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-lg py-lg">
+                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Consultation</span>
+                      </td>
+                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Sarah L.</td>
+                      <td class="px-lg py-lg text-right">
+                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Table Footer & Pagination -->
+              <div class="mt-auto border-t border-outline-variant dark:border-slate-800 p-lg flex justify-between items-center bg-surface-container-lowest dark:bg-slate-900">
+                <span class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="record-count">Menampilkan 1-4 dari 4 data</span>
+                <div class="flex gap-sm">
+                  <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-[20px] dark:text-slate-300 flex items-center">chevron_left</span>
+                  </button>
+                  <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded bg-primary text-on-primary">1</button>
+                  <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-300">2</button>
+                  <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-300">3</button>
+                  <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-[20px] dark:text-slate-300 flex items-center">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Details Preview Column -->
+            <div class="flex flex-col gap-lg">
+              <!-- Patient Summary Card -->
+              <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <div class="p-lg border-b border-outline-variant dark:border-slate-800 bg-surface-container-low dark:bg-slate-900">
+                  <h3 class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">Detail Kunjungan Terpilih</h3>
+                </div>
+                <div class="p-lg space-y-lg">
+                  <div class="flex items-start gap-md">
+                    <img id="detail-avatar" alt="Selected Patient Avatar" class="w-16 h-16 rounded-xl object-cover border border-outline-variant dark:border-slate-800 flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvRxKGLYp63qoH-1uiQcczc2VM0ucbHrcJBhD9BjtL6hUYIofyqaLCQfYM3kZVaRFOd6nABA2T0IfWx2r6j3QuxSR_P_1_nQumo_qN73Xuo9FND3o13HBAH0cC37ZzERjuBdFiknnS3-ZIsTNs881Mozh6mmp25tY0NiSoUv9NMndrXeWtNPKTlWJsqKYlbNXC7AlqjLzHpe4b7b71gV58Q5D45tQSi69cdLAQFSY2Q6zWcQO3BAld2t8bpgUe3Q7fbaWkxrmK8Aw"/>
+                    <div>
+                      <h4 class="font-title-sm text-title-sm text-on-surface dark:text-slate-100" id="detail-name">Siti Nurhaliza</h4>
+                      <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="detail-meta">28 Tahun • Perempuan</p>
+                      <span class="inline-flex items-center gap-xs text-[12px] font-semibold text-primary dark:text-primary-fixed-dim">
+                        <span class="w-2 h-2 rounded-full bg-primary"></span> Pasien Reguler
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="space-y-md">
+                    <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg space-y-sm">
+                      <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Ringkasan Medis</p>
+                      <p class="font-body-sm text-body-sm text-on-surface dark:text-slate-200" id="detail-summary">Pasien mengeluhkan hiperpigmentasi ringan di area pipi. Dilakukan treatment Facial Rejuvenation tahap 2 dengan serum pencerah dosis rendah.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-md">
+                      <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg">
+                        <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Tekanan Darah</p>
+                        <p class="font-title-sm text-title-sm text-on-surface dark:text-slate-200" id="detail-blood">115/80 mmHg</p>
+                      </div>
+                      <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg">
+                        <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Alergi Obat</p>
+                        <p class="font-title-sm text-title-sm text-primary dark:text-primary-fixed-dim" id="detail-allergy">Tidak Ada</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-sm">
+                    <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Riwayat Tindakan</p>
+                    <ul class="space-y-xs">
+                      <li class="flex items-center justify-between font-body-sm text-body-sm py-xs border-b border-outline-variant dark:border-slate-800">
+                        <span class="text-on-surface dark:text-slate-200">Laser Treatment</span>
+                        <span class="text-on-surface-variant dark:text-slate-400 italic">15 Sep 2023</span>
+                      </li>
+                      <li class="flex items-center justify-between font-body-sm text-body-sm py-xs border-b border-outline-variant dark:border-slate-800">
+                        <span class="text-on-surface dark:text-slate-200">Consultation</span>
+                        <span class="text-on-surface-variant dark:text-slate-400 italic">01 Sep 2023</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <button class="w-full flex items-center justify-center gap-sm border border-primary dark:border-primary-fixed-dim/30 text-primary dark:text-primary-fixed-dim px-lg py-sm rounded-lg font-title-sm text-title-sm hover:bg-primary/5 dark:hover:bg-primary-fixed-dim/10 transition-all">
+                    <span class="material-symbols-outlined">description</span>
+                    Lihat Semua Rekam Medis
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Note Card -->
+              <div class="bg-primary/5 dark:bg-primary-container/10 border border-primary/20 dark:border-primary/30 rounded-xl p-lg relative overflow-hidden group shadow-sm">
+                <span class="material-symbols-outlined absolute -right-4 -bottom-4 text-[120px] opacity-10 text-primary transform group-hover:scale-110 transition-transform">medical_information</span>
+                <h4 class="font-title-sm text-title-sm text-primary mb-sm">Catatan Internal</h4>
+                <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-300 relative z-10">Gunakan fitur pencarian untuk menemukan riwayat spesifik berdasarkan ID Rekam Medis (RM-XXXX). Pastikan data telah divalidasi oleh dokter sebelum dicetak.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Micro-interaction & Functionality Scripts -->
+    <script src="../assets/js/dashboard-ui.js"></script>
+    <script>
+      // Initialize theme toggling
+      setupThemeToggle('theme-toggle', 'dark-icon', 'light-icon');
+
+      // Initialize current date display (Indonesian Locale)
+      const dateDisplay = document.getElementById('current-date-display');
+      if (dateDisplay) {
+        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('search-input');
+        const filterPeriod = document.getElementById('filter-period');
+        const filterService = document.getElementById('filter-service');
+        const recordRows = document.querySelectorAll('.record-row');
+        const statusButtons = document.querySelectorAll('.status-btn');
+        const countSpan = document.getElementById('record-count');
+
+        // Selected visitor preview elements
+        const detailAvatar = document.getElementById('detail-avatar');
+        const detailName = document.getElementById('detail-name');
+        const detailMeta = document.getElementById('detail-meta');
+        const detailSummary = document.getElementById('detail-summary');
+        const detailBlood = document.getElementById('detail-blood');
+        const detailAllergy = document.getElementById('detail-allergy');
+
+        let activeStatusFilter = 'all';
+
+        // Row Selection Details Update
+        recordRows.forEach(row => {
+          row.addEventListener('click', function() {
+            // Remove active classes from all rows
+            recordRows.forEach(r => r.classList.remove('bg-primary/5', 'border-l-4', 'border-primary', 'dark:border-primary-fixed-dim'));
+
+            // Add active styles to clicked row
+            this.classList.add('bg-primary/5', 'border-l-4', 'border-primary', 'dark:border-primary-fixed-dim');
+
+            // Update details column contents
+            const name = this.getAttribute('data-name');
+            const age = this.getAttribute('data-age');
+            const gender = this.getAttribute('data-gender');
+            const summary = this.getAttribute('data-summary');
+            const blood = this.getAttribute('data-blood');
+            const allergy = this.getAttribute('data-allergy');
+            const avatar = this.getAttribute('data-avatar');
+
+            if (detailName) detailName.textContent = name;
+            if (detailMeta) detailMeta.textContent = `${age} Tahun • ${gender}`;
+            if (detailSummary) detailSummary.textContent = summary;
+            if (detailBlood) detailBlood.textContent = blood;
+            if (detailAllergy) {
+              detailAllergy.textContent = allergy;
+              if (allergy === 'Tidak Ada') {
+                detailAllergy.className = 'font-title-sm text-title-sm text-primary';
+              } else {
+                detailAllergy.className = 'font-title-sm text-title-sm text-secondary';
+              }
+            }
+            if (detailAvatar) detailAvatar.src = avatar;
+          });
+        });
+
+        // Filter Functionality
+        function filterRecords() {
+          const query = searchInput.value.toLowerCase().trim();
+          const selectedPeriod = filterPeriod.value;
+          const selectedService = filterService.value;
+
+          let visibleCount = 0;
+
+          recordRows.forEach(row => {
+            const name = row.getAttribute('data-name').toLowerCase();
+            const id = row.getAttribute('data-id').toLowerCase();
+            const service = row.getAttribute('data-service');
+            const status = row.getAttribute('data-status');
+
+            const matchesQuery = query === '' || name.includes(query) || id.includes(query);
+            const matchesService = selectedService === 'all' || service === selectedService;
+            const matchesStatus = activeStatusFilter === 'all' || status === activeStatusFilter;
+
+            // Note: Period matches are simulated here (all pass for demo database)
+            const matchesPeriod = true;
+
+            if (matchesQuery && matchesService && matchesStatus && matchesPeriod) {
+              row.style.display = '';
+              visibleCount++;
+            } else {
+              row.style.display = 'none';
+            }
+          });
+
+          if (countSpan) {
+            countSpan.textContent = `Menampilkan 1-${visibleCount} dari ${visibleCount} data`;
+          }
+        }
+
+        // Status filter buttons active toggles
+        statusButtons.forEach(btn => {
+          btn.addEventListener('click', function() {
+            statusButtons.forEach(b => {
+              b.classList.remove('bg-primary/10', 'text-primary', 'border-primary/20');
+              b.classList.add('bg-surface-container-high', 'dark:bg-surface-container-highest', 'text-on-surface-variant', 'border-transparent');
+            });
+
+            this.classList.remove('bg-surface-container-high', 'dark:bg-surface-container-highest', 'text-on-surface-variant', 'border-transparent');
+            this.classList.add('bg-primary/10', 'text-primary', 'border-primary/20');
+
+            activeStatusFilter = this.getAttribute('data-status');
+            filterRecords();
+          });
+        });
+
+        searchInput.addEventListener('input', filterRecords);
+        filterPeriod.addEventListener('change', filterRecords);
+        filterService.addEventListener('change', filterRecords);
+
+        // Run initial filtering
+        filterRecords();
+      });
+    </script>
+  </body>
+</html>

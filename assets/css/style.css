@@ -1,0 +1,127 @@
+/* Design System: Clinical Elegance */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+:root {
+  --primary: #006b5f;
+  --primary-container: #14b8a6;
+  --surface: #f7f9fb;
+  --surface-lowest: #ffffff;
+  --on-surface: #191c1e;
+  --on-surface-variant: #3c4947;
+  --outline-variant: #e2e8f0;
+  --outline: #6c7a77;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-high: #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  --surface-dim: #d8dadc;
+}
+
+.dark {
+  --primary: #4fdbc8;
+  --primary-container: #005048;
+  --surface: #0f172a;
+  --surface-lowest: #1e293b;
+  --on-surface: #eff1f3;
+  --on-surface-variant: #94a3b8;
+  --outline-variant: #334155;
+  --outline: #475569;
+  --surface-container-lowest: #0b1329;
+  --surface-container-low: #0f172a;
+  --surface-container: #1e293b;
+  --surface-container-high: #334155;
+  --surface-container-highest: #475569;
+  --surface-dim: #0f172a;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.card-metric {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--outline-variant);
+  background-color: var(--surface-lowest);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+  background: #006b5f;
+  border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #14b8a6;
+}
+
+/* Glassmorphism card utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(108, 122, 119, 0.2);
+}
+
+/* Micro-animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Card hover scaling micro-animations */
+.hover-scale {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.hover-scale:hover {
+  transform: translateY(-4px) scale(1.02);
+}

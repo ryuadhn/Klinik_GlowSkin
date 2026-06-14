@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class="light" lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>GlowSkin Clinic - Portal Staf Login</title>
+    
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css" />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#eff1f3",
+              "inverse-primary": "#4fdbc8",
+              "primary-container": "var(--primary-container)",
+              "inverse-surface": "#2d3133",
+              "on-secondary-fixed": "#40000d",
+              "surface-container-low": "var(--surface-container-low)",
+              "surface": "var(--surface)",
+              "on-background": "#191c1e",
+              "surface-bright": "var(--surface-lowest)",
+              "on-error": "#ffffff",
+              "on-tertiary-fixed": "#0b1c30",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#00201c",
+              "on-surface-variant": "var(--on-surface-variant)",
+              "outline-variant": "var(--outline-variant)",
+              "on-secondary-fixed-variant": "#92002a",
+              "surface-container-high": "var(--surface-container-high)",
+              "background": "var(--surface)",
+              "secondary-fixed": "#ffdadb",
+              "secondary": "#b90538",
+              "tertiary": "#505f76",
+              "outline": "var(--outline)",
+              "on-tertiary-fixed-variant": "#38485d",
+              "on-tertiary": "#ffffff",
+              "error": "#ba1a1a",
+              "surface-container-lowest": "var(--surface-container-lowest)",
+              "on-primary": "#ffffff",
+              "on-surface": "var(--on-surface)",
+              "on-secondary-container": "#fffbff",
+              "secondary-container": "#dc2c4f",
+              "surface-container": "var(--surface-container)",
+              "primary": "var(--primary)",
+              "secondary-fixed-dim": "#ffb2b7",
+              "on-tertiary-container": "#2b3b50",
+              "primary-fixed": "#71f8e4",
+              "error-container": "#ffdad6",
+              "surface-container-highest": "var(--surface-container-highest)",
+              "on-secondary": "#ffffff",
+              "primary-fixed-dim": "#4fdbc8",
+              "tertiary-container": "#95a5be",
+              "tertiary-fixed": "#d3e4fe",
+              "on-primary-container": "#00423b",
+              "tertiary-fixed-dim": "#b7c8e1",
+              "surface-variant": "var(--surface-container-highest)",
+              "surface-tint": "var(--primary)",
+              "surface-dim": "var(--surface-dim)",
+              "on-primary-fixed-variant": "#005048"
+            },
+            borderRadius: {
+              "DEFAULT": "0.125rem",
+              "lg": "0.25rem",
+              "xl": "0.5rem",
+              "full": "0.75rem"
+            },
+            spacing: {
+              "xs": "4px",
+              "sm": "8px",
+              "md": "16px",
+              "container-max": "1440px",
+              "sidebar-width": "260px",
+              "lg": "24px",
+              "xl": "40px",
+              "base": "4px"
+            },
+            fontFamily: {
+              "body-sm": ["Plus Jakarta Sans"],
+              "label-caps": ["Plus Jakarta Sans"],
+              "display-lg-mobile": ["Plus Jakarta Sans"],
+              "body-md": ["Plus Jakarta Sans"],
+              "title-sm": ["Plus Jakarta Sans"],
+              "headline-md": ["Plus Jakarta Sans"],
+              "display-lg": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      };
+    </script>
+    <style>
+      .bg-glow {
+        background:
+          radial-gradient(ellipse at 20% 30%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 80% 70%, rgba(185, 5, 56, 0.06) 0%, transparent 50%);
+      }
+      .dark .bg-glow {
+        background:
+          radial-gradient(ellipse at 20% 30%, rgba(79, 219, 200, 0.07) 0%, transparent 55%),
+          radial-gradient(ellipse at 80% 70%, rgba(185, 5, 56, 0.04) 0%, transparent 50%);
+      }
+      .portal-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 10px 2px 6px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border: 1px solid;
+      }
+      :root .portal-badge {
+        background: rgba(20,184,166,0.08);
+        border-color: rgba(20,184,166,0.25);
+        color: var(--primary);
+      }
+      .dark .portal-badge {
+        background: rgba(79,219,200,0.10);
+        border-color: rgba(79,219,200,0.25);
+        color: #4fdbc8;
+      }
+    </style>
+  </head>
+  <body class="bg-background text-on-surface font-body-md transition-colors duration-300 min-h-screen flex flex-col relative overflow-hidden bg-glow">
+    <!-- Top Decorative Line -->
+    <div class="h-1 w-full bg-gradient-to-r from-primary via-primary-container to-secondary-container"></div>
+    
+    <!-- Header with logo and back to site -->
+    <header class="w-full px-xl py-md flex justify-between items-center z-10 border-b border-outline-variant/20">
+      <a href="landing-page/index.html" class="flex items-center gap-sm">
+        <span class="font-display-lg text-[22px] text-primary tracking-tight font-bold leading-none">GlowSkin</span>
+        <span class="portal-badge">
+          <span class="material-symbols-outlined" style="font-size:10px">admin_panel_settings</span>
+          PORTAL STAF
+        </span>
+      </a>
+      <div class="flex items-center gap-md">
+        <!-- Theme Toggle Button -->
+        <button class="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-all" id="theme-toggle" title="Ganti tema">
+          <span class="material-symbols-outlined hidden text-[20px]" id="dark-icon">light_mode</span>
+          <span class="material-symbols-outlined text-[20px]" id="light-icon">dark_mode</span>
+        </button>
+        <a class="flex items-center gap-xs text-body-sm text-on-surface-variant hover:text-primary transition-colors border border-outline-variant/60 hover:border-primary/40 rounded-full px-md py-1.5" href="landing-page/index.html">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span class="text-xs font-medium">Kembali ke Situs</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 flex items-center justify-center px-md py-xl z-10">
+      <div class="w-full max-w-[460px] animate-fade-in-up">
+        <!-- Glassmorphism Card -->
+        <div class="bg-surface-container-lowest/80 dark:bg-surface-container-lowest/50 border border-outline-variant/60 dark:border-slate-800 backdrop-blur-xl p-xl rounded-3xl shadow-2xl space-y-xl">
+          <div class="text-center space-y-sm">
+            <h2 class="font-display-lg text-[28px] font-bold text-on-surface">Selamat Datang</h2>
+            <p class="text-body-sm text-on-surface-variant">Silakan masuk dengan kredensial staf sistem database Anda.</p>
+          </div>
+
+          <!-- Alert error wrapper -->
+          <div class="hidden p-3 bg-red-100 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-sm" id="error-alert">
+            <span class="material-symbols-outlined text-sm">error</span>
+            <span id="error-message">Username atau password salah!</span>
+          </div>
+
+          <!-- Form block -->
+          <form class="space-y-lg" id="login-form">
+            <!-- Username Input -->
+            <div class="space-y-sm">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Username Staf</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">person</span>
+                <input class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan username..." type="text" id="username" required autocomplete="username" />
+              </div>
+            </div>
+
+            <!-- Password Input -->
+            <div class="space-y-sm">
+              <div class="flex justify-between items-center">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Password</label>
+                <a href="#" class="text-[10px] font-label-caps text-primary hover:underline uppercase tracking-wider" onclick="alert('Silakan hubungi Super Admin/IT Clinic untuk reset password database Anda.')">Lupa Password?</a>
+              </div>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
+                <input class="w-full pl-10 pr-12 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan password..." type="password" id="password" required autocomplete="current-password" />
+                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" id="password-toggle">
+                  <span class="material-symbols-outlined text-[20px]" id="password-icon">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Select Role Hint dropdown -->
+            <div class="p-md bg-surface-container-low border border-outline-variant/60 dark:border-slate-800/60 rounded-xl space-y-sm shadow-inner">
+              <div class="flex items-center gap-sm text-primary dark:text-primary-fixed-dim">
+                <span class="material-symbols-outlined text-sm">database</span>
+                <span class="font-label-caps text-[10px] uppercase font-bold tracking-wider">Saran Kredensial Database Demo</span>
+              </div>
+              <div class="grid grid-cols-2 gap-md pt-sm">
+                <button type="button" class="text-left text-xs p-sm rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant dark:border-slate-800 bg-surface-container-lowest dark:bg-surface-container-lowest transition-colors" onclick="fillDemo('admin', 'admin123')">
+                  <p class="font-bold text-on-surface">Super Admin</p>
+                  <p class="text-[10px] text-on-surface-variant">admin / admin123</p>
+                </button>
+                <button type="button" class="text-left text-xs p-sm rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant dark:border-slate-800 bg-surface-container-lowest dark:bg-surface-container-lowest transition-colors" onclick="fillDemo('dokter', 'dokter123')">
+                  <p class="font-bold text-on-surface">Dokter</p>
+                  <p class="text-[10px] text-on-surface-variant">dokter / dokter123</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Login Action Button -->
+            <button class="w-full bg-primary text-on-primary py-3 rounded-xl font-title-sm hover:brightness-110 transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/10" type="submit" id="btn-login">
+              <span class="material-symbols-outlined text-[20px]">login</span>
+              <span>Masuk ke Konsol</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Copyright -->
+    <footer class="w-full text-center py-md text-xs text-on-surface-variant/40 border-t border-outline-variant/20 z-10">
+      <p>&copy; 2026 Klinik Pratama GlowSkin &bull; Tugas Sistem Basis Data &bull; Hak Cipta Dilindungi</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+      // Initialize theme toggling
+      setupThemeToggle('theme-toggle', 'dark-icon', 'light-icon');
+
+      // Password visibility toggle
+      const passwordInput = document.getElementById('password');
+      const passwordToggle = document.getElementById('password-toggle');
+      const passwordIcon = document.getElementById('password-icon');
+
+      if (passwordToggle && passwordInput && passwordIcon) {
+        passwordToggle.addEventListener('click', () => {
+          if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            passwordIcon.textContent = 'visibility_off';
+          } else {
+            passwordInput.type = 'password';
+            passwordIcon.textContent = 'visibility';
+          }
+        });
+      }
+
+      // Fill demo credentials function
+      function fillDemo(username, password) {
+        document.getElementById('username').value = username;
+        document.getElementById('password').value = password;
+        // Hide error alert when filling demo credentials
+        document.getElementById('error-alert').classList.add('hidden');
+      }
+
+      // Handle login form submission
+      const loginForm = document.getElementById('login-form');
+      const btnLogin = document.getElementById('btn-login');
+      const errorAlert = document.getElementById('error-alert');
+      const errorMessage = document.getElementById('error-message');
+
+      if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const username = document.getElementById('username').value.trim().toLowerCase();
+          const password = document.getElementById('password').value;
+
+          // Hide any previous errors
+          errorAlert.classList.add('hidden');
+
+          // Disable button and show loader
+          const originalContent = btnLogin.innerHTML;
+          btnLogin.disabled = true;
+          btnLogin.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">sync</span> <span>Memverifikasi Database...</span>`;
+
+          // Simulate API & database checking latency
+          setTimeout(() => {
+            if (username === 'admin' && password === 'admin123') {
+              // Admin credentials match
+              btnLogin.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> <span>Akses Admin Diterima!</span>`;
+              btnLogin.classList.replace('bg-primary', 'bg-green-600');
+              setTimeout(() => {
+                window.location.href = 'dashboard-admin/index.html';
+              }, 1000);
+            } else if (username === 'dokter' && password === 'dokter123') {
+              // Doctor credentials match
+              btnLogin.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> <span>Akses Dokter Diterima!</span>`;
+              btnLogin.classList.replace('bg-primary', 'bg-green-600');
+              setTimeout(() => {
+                window.location.href = 'dashboard-dokter/index.html';
+              }, 1000);
+            } else {
+              // Credentials mismatch (simulate database query failure)
+              btnLogin.disabled = false;
+              btnLogin.innerHTML = originalContent;
+              
+              // Show warning alert
+              errorMessage.textContent = 'Username atau password database salah!';
+              errorAlert.classList.remove('hidden');
+            }
+          }, 1200);
+        });
+      }
+    </script>
+  </body>
+</html>

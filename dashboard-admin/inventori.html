@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html class="light" lang="id">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Inventori Produk Skincare | GlowSkin Admin</title>
+
+  <!-- Scripts & Styles -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="../assets/js/theme-toggle.js"></script>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "var(--surface)",
+            "secondary": "#b90538",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#40000d",
+            "surface-container-highest": "var(--surface-container-highest)",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "tertiary-fixed-dim": "#b7c8e1",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#0b1c30",
+            "primary-fixed-dim": "#4fdbc8",
+            "outline-variant": "var(--outline-variant)",
+            "on-background": "#191c1e",
+            "on-surface": "var(--on-surface)",
+            "surface-tint": "var(--primary)",
+            "on-secondary-fixed-variant": "#92002a",
+            "on-primary-container": "#00423b",
+            "on-tertiary": "#ffffff",
+            "surface-variant": "var(--surface-container-highest)",
+            "inverse-surface": "#2d3133",
+            "surface-container-high": "var(--surface-container-high)",
+            "secondary-fixed-dim": "#ffb2b7",
+            "surface-bright": "var(--surface-lowest)",
+            "on-primary-fixed-variant": "#005048",
+            "surface-container-low": "var(--surface-container-low)",
+            "surface-container": "var(--surface-container)",
+            "primary": "var(--primary)",
+            "on-tertiary-container": "#2b3b50",
+            "tertiary-fixed": "#d3e4fe",
+            "primary-fixed": "#71f8e4",
+            "inverse-primary": "#4fdbc8",
+            "surface-dim": "var(--surface-dim)",
+            "surface-container-lowest": "var(--surface-container-lowest)",
+            "inverse-on-surface": "#eff1f3",
+            "on-secondary-container": "#fffbff",
+            "primary-container": "var(--primary-container)",
+            "secondary-container": "#dc2c4f",
+            "on-tertiary-fixed-variant": "#38485d",
+            "on-primary": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-primary-fixed": "#00201c",
+            "tertiary": "#505f76",
+            "outline": "var(--outline)",
+            "on-surface-variant": "var(--on-surface-variant)",
+            "background": "var(--surface)",
+            "secondary-fixed": "#ffdadb",
+            "tertiary-container": "#95a5be"
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          spacing: {
+            "sm": "8px",
+            "xl": "40px",
+            "md": "16px",
+            "container-max": "1440px",
+            "xs": "4px",
+            "lg": "24px",
+            "sidebar-width": "260px",
+            "base": "4px"
+          },
+          fontFamily: {
+            "display-lg": ["Plus Jakarta Sans"],
+            "headline-md": ["Plus Jakarta Sans"],
+            "label-caps": ["Plus Jakarta Sans"],
+            "body-md": ["Plus Jakarta Sans"],
+            "body-sm": ["Plus Jakarta Sans"],
+            "title-sm": ["Plus Jakarta Sans"],
+            "display-lg-mobile": ["Plus Jakarta Sans"]
+          },
+          fontSize: {
+            "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+
+<body
+  class="bg-surface dark:bg-[#0f172a] text-on-surface dark:text-[#f1f5f9] font-body-md transition-colors duration-300">
+  <!-- SideNavBar Shell -->
+  <aside
+    class="fixed h-full w-[260px] left-0 top-0 flex flex-col py-lg border-r border-outline-variant dark:border-slate-800 bg-surface-container-lowest dark:bg-[#0f172a] z-50">
+    <div class="px-lg mb-xl">
+      <h1 class="font-display-lg text-display-lg text-primary dark:text-primary-fixed-dim tracking-tight">GlowSkin</h1>
+      <p
+        class="font-label-caps text-label-caps text-on-surface-variant/60 dark:text-slate-400 tracking-widest uppercase">
+        Admin Console</p>
+    </div>
+
+    <nav class="flex-1 space-y-1">
+      <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors"
+        href="index.html">
+        <span class="material-symbols-outlined mr-3">dashboard</span>
+        <span class="font-label-caps text-label-caps">Ringkasan Dashboard</span>
+      </a>
+      <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors"
+        href="rekam-medis.html">
+        <span class="material-symbols-outlined mr-3">medical_services</span>
+        <span class="font-label-caps text-label-caps">Data Pasien &amp; Rekam Medis</span>
+      </a>
+      <!-- Active Tab -->
+      <a class="group relative flex items-center px-lg py-3 text-primary dark:text-primary-fixed-dim font-bold border-l-4 border-primary dark:border-primary-fixed-dim bg-primary/5 transition-all duration-200"
+        href="inventori.html">
+        <span class="material-symbols-outlined mr-3">inventory_2</span>
+        <span class="font-label-caps text-label-caps">Inventori Produk Skincare</span>
+      </a>
+      <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors"
+        href="log-keamanan.html">
+        <span class="material-symbols-outlined mr-3">security</span>
+        <span class="font-label-caps text-label-caps">Log Keamanan Sistem</span>
+      </a>
+    </nav>
+
+    <div class="px-lg pt-lg mt-auto border-t border-outline-variant dark:border-slate-800">
+      <button id="btn-new-appointment"
+        class="w-full py-3 px-4 bg-primary text-on-primary font-bold rounded-lg mb-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+        <span class="font-label-caps text-label-caps">New Appointment</span>
+      </button>
+      <div class="space-y-1">
+        <a id="link-settings" class="flex items-center px-2 py-2 text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors"
+          href="#">
+          <span class="material-symbols-outlined mr-3 text-[20px]">settings</span>
+          <span class="font-body-sm text-body-sm">Settings</span>
+        </a>
+        <a class="flex items-center px-2 py-2 text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors"
+          href="../landing-page/index.html">
+          <span class="material-symbols-outlined mr-3 text-[20px]">logout</span>
+          <span class="font-body-sm text-body-sm">Keluar</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="ml-[260px] min-h-screen flex flex-col">
+    <!-- TopNavBar Shell -->
+    <header
+      class="fixed top-0 right-0 w-[calc(100%-260px)] h-16 bg-surface-container-lowest dark:bg-[#0f172a] border-b border-outline-variant dark:border-slate-800 flex justify-between items-center px-xl z-40">
+      <div class="flex items-center flex-1 max-w-xl">
+        <div class="relative w-full">
+          <span
+            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-slate-400">search</span>
+          <input
+            class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-full py-2 pl-10 pr-4 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+            placeholder="Cari produk, kategori, atau kode..." type="text" id="search-input" />
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 ml-lg">
+        <!-- Theme Toggle Button -->
+        <button
+          class="relative text-on-surface-variant dark:text-slate-300 hover:text-primary transition-colors flex items-center"
+          id="theme-toggle">
+          <span class="material-symbols-outlined hidden" id="dark-icon">light_mode</span>
+          <span class="material-symbols-outlined" id="light-icon">dark_mode</span>
+        </button>
+
+        <button class="relative text-on-surface-variant dark:text-slate-300 hover:text-primary transition-colors">
+          <span class="material-symbols-outlined">notifications</span>
+          <span
+            class="absolute top-0 right-0 w-2 h-2 bg-secondary rounded-full border-2 border-surface-container-lowest dark:border-[#0f172a]"></span>
+        </button>
+
+        <div class="flex items-center gap-2 text-on-surface-variant dark:text-slate-300 bg-surface-container-low/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-outline-variant/30 dark:border-slate-800">
+          <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+          <span class="text-body-sm font-medium" id="current-date-display">13 Juni 2026</span>
+        </div>
+
+        <div class="h-8 w-px bg-outline-variant dark:bg-slate-800"></div>
+
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <p class="font-title-sm text-title-sm leading-none text-primary">Dr. Sarah Wijaya</p>
+            <p class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400">SUPER ADMIN</p>
+          </div>
+          <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+            <img alt="Administrator Profile" class="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M" />
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Canvas -->
+    <main class="mt-16 p-xl flex-1 max-w-[1440px] mx-auto w-full bg-background dark:bg-transparent">
+      <!-- Header Section -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-xl gap-lg">
+        <div>
+          <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface">Inventori Produk
+            Skincare</h2>
+          <p class="text-on-surface-variant font-body-md mt-1">Kelola stok produk, pembaruan harga, dan pantau
+            ketersediaan barang secara real-time.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            class="flex items-center gap-2 px-lg py-3 bg-surface-container-lowest dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg font-label-caps text-label-caps text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-700 transition-all">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            Export Data
+          </button>
+          <button
+            class="flex items-center gap-2 px-lg py-3 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps hover:brightness-110 transition-all">
+            <span class="material-symbols-outlined text-[18px]">add_circle</span>
+            Tambah Produk Baru
+          </button>
+        </div>
+      </div>
+
+      <!-- Bento Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg mb-xl">
+        <!-- Total Products -->
+        <div
+          class="bg-surface-container-lowest dark:bg-[#1e293b] p-lg rounded-xl border border-outline-variant dark:border-slate-800 flex items-start gap-4 h-36 relative overflow-hidden">
+          <div
+            class="p-2 bg-primary/10 rounded-lg text-primary dark:text-primary-fixed-dim flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-[20px]">inventory</span>
+          </div>
+          <div class="flex-grow flex flex-col justify-center h-full">
+            <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Total
+              Produk</p>
+            <p class="font-display-lg text-display-lg text-on-surface dark:text-slate-100 mt-1">142</p>
+          </div>
+          <div class="absolute -right-4 -bottom-4 opacity-5">
+            <span class="material-symbols-outlined text-[120px]">inventory</span>
+          </div>
+        </div>
+
+        <!-- Low Stock - Alert Styling -->
+        <div
+          class="bg-surface-container-lowest dark:bg-[#1e293b] p-lg rounded-xl border border-secondary/30 bg-secondary/5 dark:bg-red-950/20 dark:border-red-900/30 flex items-start gap-4 h-36 relative overflow-hidden">
+          <div
+            class="p-2 bg-secondary/10 rounded-lg text-secondary dark:text-red-400 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-[20px]">warning</span>
+          </div>
+          <div class="flex-grow flex flex-col justify-center h-full">
+            <p class="font-label-caps text-label-caps text-secondary dark:text-red-400 uppercase">Stok Rendah</p>
+            <div class="flex items-baseline gap-2 mt-1">
+              <p class="font-display-lg text-display-lg text-secondary dark:text-red-400">12</p>
+              <span class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-300">Perlu Restock</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Best Seller -->
+        <div
+          class="bg-surface-container-lowest dark:bg-[#1e293b] p-lg rounded-xl border border-outline-variant dark:border-slate-800 flex items-start gap-4 h-36 relative overflow-hidden">
+          <div
+            class="p-2 bg-tertiary-container/20 rounded-lg text-tertiary dark:text-tertiary-fixed flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-[20px]">trending_up</span>
+          </div>
+          <div class="flex-grow flex flex-col justify-center h-full">
+            <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Produk
+              Terlaris</p>
+            <p class="font-title-sm text-title-sm text-on-surface dark:text-slate-100 line-clamp-1 mt-1">Glow Radiance
+              Serum</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400">84 terjual bulan ini</p>
+          </div>
+        </div>
+
+        <!-- Active Categories -->
+        <div
+          class="bg-surface-container-lowest dark:bg-[#1e293b] p-lg rounded-xl border border-outline-variant dark:border-slate-800 flex items-start gap-4 h-36 relative overflow-hidden">
+          <div
+            class="p-2 bg-primary-container/20 rounded-lg text-primary dark:text-primary-fixed-dim flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-[20px]">category</span>
+          </div>
+          <div class="flex-grow flex flex-col justify-center h-full">
+            <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Kategori
+              Aktif</p>
+            <p class="font-display-lg text-display-lg text-on-surface dark:text-slate-100 mt-1">8</p>
+            <div class="flex gap-1 mt-2">
+              <div class="h-1 flex-1 bg-primary rounded-full"></div>
+              <div class="h-1 flex-1 bg-primary rounded-full"></div>
+              <div class="h-1 flex-1 bg-primary/20 dark:bg-primary-fixed-dim/20 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Actions -->
+      <div
+        class="bg-surface-container-lowest dark:bg-[#1e293b] p-lg rounded-xl border border-outline-variant dark:border-slate-800 mb-lg flex flex-col md:flex-row gap-lg items-center justify-between">
+        <div class="flex flex-wrap gap-md w-full md:w-auto">
+          <div class="flex flex-col gap-1">
+            <label
+              class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 px-1 uppercase">Kategori</label>
+            <select
+              class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-md py-2 text-body-sm text-on-surface dark:text-slate-100 outline-none focus:border-primary transition-all min-w-[160px]"
+              id="filter-category">
+              <option value="all">Semua Kategori</option>
+              <option value="cleanser">Cleanser</option>
+              <option value="serum">Serum</option>
+              <option value="sunscreen">Sunscreen</option>
+              <option value="moisturizer">Moisturizer</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 px-1 uppercase">Status
+              Stok</label>
+            <select
+              class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-md py-2 text-body-sm text-on-surface dark:text-slate-100 outline-none focus:border-primary transition-all min-w-[160px]"
+              id="filter-status">
+              <option value="all">Semua Status</option>
+              <option value="instock">Tersedia (Aman)</option>
+              <option value="lowstock">Hampir Habis</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-body-sm text-on-surface-variant dark:text-slate-400" id="product-count">Menampilkan 1-4 dari
+            4 produk</span>
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div
+        class="bg-surface-container-lowest dark:bg-[#1e293b] rounded-xl border border-outline-variant dark:border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead
+              class="bg-surface-container-low dark:bg-slate-900 border-b border-outline-variant dark:border-slate-800">
+              <tr>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">
+                  Kode Produk</th>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">
+                  Nama Produk</th>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">
+                  Kategori</th>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">
+                  Stok</th>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider text-right">
+                  Harga Satuan</th>
+                <th
+                  class="px-lg py-4 font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase tracking-wider text-center">
+                  Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/30 dark:divide-slate-800/50" id="product-table-body">
+              <!-- Row 1: High Stock -->
+              <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors group product-row"
+                data-category="cleanser" data-status="instock">
+                <td class="px-lg py-4 font-body-sm text-on-surface dark:text-slate-200 font-mono">GS-CLS-001</td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 rounded-lg bg-surface dark:bg-slate-900 border border-outline-variant dark:border-slate-800 overflow-hidden flex-shrink-0">
+                      <img class="w-full h-full object-cover" alt="Gentle Foaming Cleanser"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvxO_-Mu3S2lL7zzTE_lB4-ZqmdzYh0ryhFB9iHZWtBslnspzY4ZYjCXjuRut68ID3VT1EQRCKLyHj5VfDoZJetCm7KyNGGeJ3DxBcLOUom5zSNjOckOuxu3X__hNH2oH_0CYhTfT50F7bfvwrXVdP0CfphK9kA14vKZMFmfZXYlQiTtwlB3pMSf2ijIuK93N26pq93jOo29nxd95e1640rOYf6BUeFAqrEL7Zcf7S_04aWAd5Ws09_nNL-DUWJJ5W6FZg-yn0TRs" />
+                    </div>
+                    <span class="font-body-md font-medium text-on-surface dark:text-slate-100">Gentle Foaming
+                      Cleanser</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4">
+                  <span
+                    class="px-3 py-1 bg-primary/10 dark:bg-primary-fixed-dim/20 text-primary dark:text-primary-fixed-dim rounded-full font-label-caps text-[10px] uppercase">Cleanser</span>
+                </td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-24 h-2 bg-surface-container-high dark:bg-slate-900 rounded-full overflow-hidden">
+                      <div class="w-[85%] h-full bg-primary"></div>
+                    </div>
+                    <span class="text-body-sm text-on-surface-variant dark:text-slate-400">85 Unit</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4 text-right font-body-md text-on-surface dark:text-slate-200">Rp 185.000</td>
+                <td class="px-lg py-4">
+                  <div class="flex justify-center gap-2">
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">edit</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-secondary dark:hover:text-red-400 transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 2: Medium Stock -->
+              <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors group product-row"
+                data-category="serum" data-status="instock">
+                <td class="px-lg py-4 font-body-sm text-on-surface dark:text-slate-200 font-mono">GS-SRM-012</td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 rounded-lg bg-surface dark:bg-slate-900 border border-outline-variant dark:border-slate-800 overflow-hidden flex-shrink-0">
+                      <img class="w-full h-full object-cover" alt="Brightening Vitamin C Serum"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDq97QDTyo-p_fFvceDyNYP3I0mKO7b8gLXsLOk3JquQifEhUzlrux1aL1jz6giAxmuUyzBvqwY3jsowpZWcg3bPex_H4HHFDdz6H5AmktCOj0vhDtrGbTZiNZOpPIFBG-FQ6rHGIWX640VTGpuX-vSZ4gmHnlZ3tzyUYI3AMADbmXUuP8d5AzsDrL4bGb73LrIDWxgFmmnGZ0QjUvOytkSjoH5Bp1vscqt7lRZTjb2jvE_i4rzW_OT2HaIily-gah9YwJBQMijP10" />
+                    </div>
+                    <span class="font-body-md font-medium text-on-surface dark:text-slate-100">Brightening Vitamin C
+                      Serum</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4">
+                  <span
+                    class="px-3 py-1 bg-primary/10 dark:bg-primary-fixed-dim/20 text-primary dark:text-primary-fixed-dim rounded-full font-label-caps text-[10px] uppercase">Serum</span>
+                </td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-24 h-2 bg-surface-container-high dark:bg-slate-900 rounded-full overflow-hidden">
+                      <div class="w-[45%] h-full bg-tertiary"></div>
+                    </div>
+                    <span class="text-body-sm text-on-surface-variant dark:text-slate-400">45 Unit</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4 text-right font-body-md text-on-surface dark:text-slate-200">Rp 320.000</td>
+                <td class="px-lg py-4">
+                  <div class="flex justify-center gap-2">
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">edit</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-secondary dark:hover:text-red-400 transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 3: Low Stock -->
+              <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors group product-row"
+                data-category="sunscreen" data-status="lowstock">
+                <td class="px-lg py-4 font-body-sm text-on-surface dark:text-slate-200 font-mono">GS-SUN-005</td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 rounded-lg bg-surface dark:bg-slate-900 border border-outline-variant dark:border-slate-800 overflow-hidden flex-shrink-0">
+                      <img class="w-full h-full object-cover" alt="UV Shield Daily Sunscreen"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTuebV9IcJrHnqW2CPVLedT7srbVq0D0Eo0IGtF11N7bmbOv3E04brMFsKjK5A546qprEBLtFM7jN812ebpqmi1Qv8g--FwDBvJoBnFTIxD8N-X8bAThuMg3p4FC-WWP5D0y4km5YqUermThvox-yelZ97HXTo9IfEmrftg1fnUNA5pZ4bqjZtZVgDtwVD4my_Rm1sNvJ_KDGJM-pzOJWWJRs8qAMfimiIKK4J-u5zD_YwjObe2zPehZsUrbRtk3koU-3CcL8Ckvk" />
+                    </div>
+                    <span class="font-body-md font-medium text-on-surface dark:text-slate-100">UV Shield Daily
+                      Sunscreen</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4">
+                  <span
+                    class="px-3 py-1 bg-primary/10 dark:bg-primary-fixed-dim/20 text-primary dark:text-primary-fixed-dim rounded-full font-label-caps text-[10px] uppercase">Sunscreen</span>
+                </td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-24 h-2 bg-surface-container-high dark:bg-slate-900 rounded-full overflow-hidden">
+                      <div class="w-[8%] h-full bg-secondary dark:bg-red-500"></div>
+                    </div>
+                    <span class="text-body-sm text-secondary dark:text-red-400 font-bold">8 Unit</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4 text-right font-body-md text-on-surface dark:text-slate-200">Rp 215.000</td>
+                <td class="px-lg py-4">
+                  <div class="flex justify-center gap-2">
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">edit</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-secondary dark:hover:text-red-400 transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 4: High Stock -->
+              <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors group product-row"
+                data-category="moisturizer" data-status="instock">
+                <td class="px-lg py-4 font-body-sm text-on-surface dark:text-slate-200 font-mono">GS-MST-021</td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 rounded-lg bg-surface dark:bg-slate-900 border border-outline-variant dark:border-slate-800 overflow-hidden flex-shrink-0">
+                      <img class="w-full h-full object-cover" alt="Hyaluronic Acid Gel"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS5BwY3H8kVhBv6vMb2O-IRhU4xcMOcMf0RsVaCPZQTSh0LyPTYHn-dGYzioJhrGFIqpbFbcyW_lEgFwJKKXUKdnscb-zL-1SkzFZsD6gdw12F2zvRBcKTPSHYKwGpGdXsY9C3UZp1ikqTV-boR2rI0cw356u1f_Zj4JpzdUVPIVVWAwqeZzexivqrSSwJtUYgUY0QHed28xWacjVzmCFaUq4IPr16OMUr5xwg8aPwa1Wmnpe_46NvfOTmmSCE4u-DLkksSCJXxfs" />
+                    </div>
+                    <span class="font-body-md font-medium text-on-surface dark:text-slate-100">Hyaluronic Acid
+                      Gel</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4">
+                  <span
+                    class="px-3 py-1 bg-primary/10 dark:bg-primary-fixed-dim/20 text-primary dark:text-primary-fixed-dim rounded-full font-label-caps text-[10px] uppercase">Moisturizer</span>
+                </td>
+                <td class="px-lg py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-24 h-2 bg-surface-container-high dark:bg-slate-900 rounded-full overflow-hidden">
+                      <div class="w-[92%] h-full bg-primary"></div>
+                    </div>
+                    <span class="text-body-sm text-on-surface-variant dark:text-slate-400">92 Unit</span>
+                  </div>
+                </td>
+                <td class="px-lg py-4 text-right font-body-md text-on-surface dark:text-slate-200">Rp 245.000</td>
+                <td class="px-lg py-4">
+                  <div class="flex justify-center gap-2">
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">edit</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-secondary dark:hover:text-red-400 transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                    <button
+                      class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Shell -->
+        <div
+          class="px-lg py-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-md">
+          <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400">Menampilkan halaman 1 dari 15
+          </p>
+          <div class="flex items-center gap-1">
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant dark:border-slate-800 hover:bg-surface dark:hover:bg-slate-800 text-on-surface dark:text-slate-300 transition-colors disabled:opacity-50"
+              disabled="">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold">1</button>
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant dark:border-slate-800 hover:bg-surface dark:hover:bg-slate-800 text-on-surface dark:text-slate-300 transition-colors">2</button>
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant dark:border-slate-800 hover:bg-surface dark:hover:bg-slate-800 text-on-surface dark:text-slate-300 transition-colors">3</button>
+            <span class="px-2 text-on-surface dark:text-slate-300">...</span>
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant dark:border-slate-800 hover:bg-surface dark:hover:bg-slate-800 text-on-surface dark:text-slate-300 transition-colors">15</button>
+            <button
+              class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant dark:border-slate-800 hover:bg-surface dark:hover:bg-slate-800 text-on-surface dark:text-slate-300 transition-colors">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Micro-interaction & Functionality Scripts -->
+  <script src="../assets/js/dashboard-ui.js"></script>
+  <script>
+    // Initialize theme toggling using shared utility
+    setupThemeToggle('theme-toggle', 'dark-icon', 'light-icon');
+
+    // Initialize current date display
+    const dateDisplay = document.getElementById('current-date-display');
+    if (dateDisplay) {
+      const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
+    }
+
+    // Search, Category Filter, and Status Filter functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('search-input');
+      const filterCategory = document.getElementById('filter-category');
+      const filterStatus = document.getElementById('filter-status');
+      const rows = document.querySelectorAll('.product-row');
+      const countSpan = document.getElementById('product-count');
+
+      function filterProducts() {
+        const query = searchInput.value.toLowerCase().trim();
+        const selectedCategory = filterCategory.value.toLowerCase();
+        const selectedStatus = filterStatus.value.toLowerCase();
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+          const productName = row.querySelector('td:nth-child(2) span').textContent.toLowerCase();
+          const productCode = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+          const rowCategory = row.getAttribute('data-category').toLowerCase();
+          const rowStatus = row.getAttribute('data-status').toLowerCase();
+
+          const matchesQuery = query === '' || productName.includes(query) || productCode.includes(query);
+          const matchesCategory = selectedCategory === 'all' || rowCategory === selectedCategory;
+          const matchesStatus = selectedStatus === 'all' || rowStatus === selectedStatus;
+
+          if (matchesQuery && matchesCategory && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        // Update count text
+        if (countSpan) {
+          countSpan.textContent = `Menampilkan 1-${visibleCount} dari ${visibleCount} produk`;
+        }
+      }
+
+      searchInput.addEventListener('input', filterProducts);
+      filterCategory.addEventListener('change', filterProducts);
+      filterStatus.addEventListener('change', filterProducts);
+
+      // Run initial filter to update counts
+      filterProducts();
+    });
+  </script>
+</body>
+
+</html>

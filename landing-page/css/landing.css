@@ -1,0 +1,43 @@
+/* Custom scrollbar for premium feel */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #006b5f;
+    border-radius: 10px;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.dark .glass-card {
+    background: rgba(45, 49, 51, 0.7);
+    border-color: rgba(108, 122, 119, 0.3);
+}
+
+.bg-decoration-blur {
+  filter: blur(120px);
+  will-change: transform;
+}
+
+/* Slide animation for booking modal or success states */
+.booking-success-pop {
+  animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popScale {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
