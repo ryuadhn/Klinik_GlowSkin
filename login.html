@@ -134,7 +134,7 @@
     
     <!-- Header with logo and back to site -->
     <header class="w-full px-xl py-md flex justify-between items-center z-10 border-b border-outline-variant/20">
-      <a href="landing-page/index.html" class="flex items-center gap-sm">
+      <a href="landing-page/index.php" class="flex items-center gap-sm">
         <span class="font-display-lg text-[22px] text-primary tracking-tight font-bold leading-none">GlowSkin</span>
         <span class="portal-badge">
           <span class="material-symbols-outlined" style="font-size:10px">admin_panel_settings</span>
@@ -147,7 +147,7 @@
           <span class="material-symbols-outlined hidden text-[20px]" id="dark-icon">light_mode</span>
           <span class="material-symbols-outlined text-[20px]" id="light-icon">dark_mode</span>
         </button>
-        <a class="flex items-center gap-xs text-body-sm text-on-surface-variant hover:text-primary transition-colors border border-outline-variant/60 hover:border-primary/40 rounded-full px-md py-1.5" href="landing-page/index.html">
+        <a class="flex items-center gap-xs text-body-sm text-on-surface-variant hover:text-primary transition-colors border border-outline-variant/60 hover:border-primary/40 rounded-full px-md py-1.5" href="landing-page/index.php">
           <span class="material-symbols-outlined text-[16px]">arrow_back</span>
           <span class="text-xs font-medium">Kembali ke Situs</span>
         </a>
@@ -286,14 +286,14 @@
               btnLogin.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> <span>Akses Admin Diterima!</span>`;
               btnLogin.classList.replace('bg-primary', 'bg-green-600');
               setTimeout(() => {
-                window.location.href = 'dashboard-admin/index.html';
+                window.location.href = 'dashboard-admin/index.php';
               }, 1000);
             } else if (username === 'dokter' && password === 'dokter123') {
               // Doctor credentials match
               btnLogin.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> <span>Akses Dokter Diterima!</span>`;
               btnLogin.classList.replace('bg-primary', 'bg-green-600');
               setTimeout(() => {
-                window.location.href = 'dashboard-dokter/index.html';
+                window.location.href = 'dashboard-dokter/index.php';
               }, 1000);
             } else {
               // Credentials mismatch (simulate database query failure)
