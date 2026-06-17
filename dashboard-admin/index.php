@@ -54,14 +54,14 @@ try {
 }
 
 // --- QUERY 1C: PENDAPATAN BULAN INI ---
-// Menjumlahkan (SUM) kolom 'grand_total' di tabel 'transaksi'
+// Menjumlahkan (SUM) kolom 'grand_total' di tabel 'pembayaran'
 // yang dibuat pada bulan dan tahun yang sama dengan saat ini.
 try {
     $stmt_pendapatan = $pdo->query("
         SELECT COALESCE(SUM(grand_total), 0) AS total_pendapatan
-        FROM transaksi
-        WHERE MONTH(tanggal_transaksi) = MONTH(CURDATE())
-          AND YEAR(tanggal_transaksi)  = YEAR(CURDATE())
+        FROM pembayaran
+        WHERE MONTH(tanggal_bayar) = MONTH(CURDATE())
+          AND YEAR(tanggal_bayar)  = YEAR(CURDATE())
     ");
     $pendapatan_bulan_ini = $stmt_pendapatan->fetch()['total_pendapatan'] ?? 0;
 } catch (PDOException $e) {
@@ -69,13 +69,12 @@ try {
 }
 
 // --- QUERY 1D: OBAT/PRODUK PERLU RESTOCK ---
-// Menghitung jumlah produk di tabel 'produk' yang stoknya
-// kurang dari atau sama dengan batas minimum (misal: stok_minimum).
-// Jika kolom stok_minimum tidak ada, kita pakai angka tetap (misal: 10).
+// Menghitung jumlah obat di tabel 'obat' yang stoknya
+// kurang dari atau sama dengan batas minimum (stok_minimum).
 try {
     $stmt_restock = $pdo->query("
         SELECT COUNT(*) AS total
-        FROM produk
+        FROM obat
         WHERE stok <= stok_minimum
     ");
     $obat_restock = $stmt_restock->fetch()['total'] ?? 0;
@@ -89,11 +88,11 @@ try {
  * ============================================================
  * Mengambil 3 layanan/perawatan teratas berdasarkan jumlah transaksi.
  * Menggunakan LEFT JOIN agar data layanan tetap muncul meskipun
- * belum pernah ada transaksi sama sekali (menghindari bug data kosong).
+ * belum pernah ada pendaftaran layanan sama sekali (menghindari bug data kosong).
  *
  * Alur JOIN:
  * layanan (tabel utama)
- *   └─ LEFT JOIN detail_transaksi (untuk menghitung berapa kali dipesan)
+ *   └─ LEFT JOIN detail_layanan (untuk menghitung berapa kali dipesan)
  *
  * GROUP BY digunakan untuk mengelompokkan per layanan.
  * ORDER BY jumlah_transaksi DESC untuk mengurutkan dari terbanyak.
@@ -103,9 +102,9 @@ try {
     $stmt_top_perawatan = $pdo->query("
         SELECT
             l.nama_layanan,
-            COUNT(dt.id_detail_transaksi) AS jumlah_transaksi
+            COUNT(dl.id_detail) AS jumlah_transaksi
         FROM layanan l
-        LEFT JOIN detail_transaksi dt ON l.id_layanan = dt.id_layanan
+        LEFT JOIN detail_layanan dl ON l.id_layanan = dl.id_layanan
         GROUP BY l.id_layanan, l.nama_layanan
         ORDER BY jumlah_transaksi DESC
         LIMIT 3
@@ -142,22 +141,81 @@ try {
         LEFT JOIN layanan l ON dl.id_layanan = l.id_layanan
         GROUP BY k.id_kunjungan
         ORDER BY k.tanggal_kunjungan DESC, k.waktu_daftar DESC, k.id_kunjungan DESC
-        LIMIT 5
     ");
     $recent_reservations = $stmt_recent->fetchAll();
 } catch (PDOException $e) {
     $recent_reservations = [];
 }
 
-/**
- * ============================================================
- * FUNGSI HELPER: FORMAT ANGKA RUPIAH
- * ============================================================
- * Mengubah angka mentah (misal: 184200000) menjadi format
- * Rupiah Indonesia yang mudah dibaca (misal: Rp 184.200.000).
- */
+// --- FUNGSI HELPER: FORMAT ANGKA RUPIAH ---
 function formatRupiah($angka) {
     return 'Rp ' . number_format($angka, 0, ',', '.');
+}
+
+// --- QUERY 5 VIEW UNTUK LAPORAN MANAJEMEN (BAB VII) ---
+try {
+    $v_kunjungan_bulanan = $pdo->query("SELECT * FROM v_laporan_kunjungan_bulanan")->fetchAll();
+} catch (PDOException $e) {
+    $v_kunjungan_bulanan = [];
+}
+
+try {
+    $v_layanan_terlaris = $pdo->query("SELECT * FROM v_laporan_layanan_terlaris")->fetchAll();
+} catch (PDOException $e) {
+    $v_layanan_terlaris = [];
+}
+
+try {
+    $v_pasien_teraktif = $pdo->query("SELECT * FROM v_laporan_pasien_teraktif")->fetchAll();
+} catch (PDOException $e) {
+    $v_pasien_teraktif = [];
+}
+
+try {
+    $v_stok_minimum = $pdo->query("SELECT * FROM v_laporan_stok_minimum")->fetchAll();
+} catch (PDOException $e) {
+    $v_stok_minimum = [];
+}
+
+try {
+    $v_pendapatan_tahunan = $pdo->query("SELECT * FROM v_laporan_pendapatan_tahunan")->fetchAll();
+} catch (PDOException $e) {
+    $v_pendapatan_tahunan = [];
+}
+
+// --- FUNGSI HELPER UNTUK RENDER TABEL DATABASE VIEW SECARA DINAMIS ---
+function renderReportTable($view_data) {
+    if (!empty($view_data)) {
+        echo '<table class="w-full text-left border-collapse">';
+        echo '  <thead class="sticky top-0 bg-surface-container-low dark:bg-[#1e293b] text-label-caps text-on-surface-variant dark:text-slate-400 border-b border-outline-variant/30 dark:border-slate-800">';
+        echo '    <tr>';
+        // Ambil header kolom secara dinamis dari keys baris pertama
+        foreach (array_keys($view_data[0]) as $col_name) {
+            echo '    <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">' . htmlspecialchars(str_replace('_', ' ', $col_name)) . '</th>';
+        }
+        echo '    </tr>';
+        echo '  </thead>';
+        echo '  <tbody class="divide-y divide-outline-variant/20 dark:divide-slate-800/50 text-body-sm">';
+        foreach ($view_data as $row) {
+            echo '  <tr class="text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-low/40 dark:hover:bg-slate-800/40 transition-colors">';
+            foreach ($row as $val) {
+                // Formatting Rupiah jika nilai berupa angka besar dan kolom terkait keuangan
+                if (is_numeric($val) && (strpos($val, '.') !== false || $val > 1000) && ($val == (float)$val)) {
+                    $formatted_val = 'Rp ' . number_format($val, 0, ',', '.');
+                } else {
+                    $formatted_val = htmlspecialchars($val ?? '-');
+                }
+                echo '    <td class="px-lg py-md">' . $formatted_val . '</td>';
+            }
+            echo '  </tr>';
+        }
+        echo '  </tbody>';
+        echo '</table>';
+    } else {
+        echo '<div class="p-xl text-center text-on-surface-variant dark:text-slate-400 italic text-sm">';
+        echo '  Tidak ada data laporan yang tersedia atau Database View belum diisi di MySQL Workbench.';
+        echo '</div>';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -598,6 +656,83 @@ function formatRupiah($angka) {
             </table>
           </div>
         </div>
+
+        <!-- Laporan Manajemen & Eksekutif (Bab VII) Section -->
+        <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-2xl p-xl shadow-sm space-y-lg mt-xl">
+          <div>
+            <h2 class="font-title-sm text-title-sm font-bold text-on-surface dark:text-slate-100 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[24px]">analytics</span>
+              Laporan Manajemen &amp; Eksekutif (Bab VII)
+            </h2>
+            <p class="text-body-sm text-on-surface-variant dark:text-slate-400">
+              Kompilasi laporan berbasis Database View untuk kebutuhan pelaporan eksekutif manajemen dan analisis performa klinik.
+            </p>
+          </div>
+
+          <!-- Tab Selector -->
+          <div class="flex flex-wrap gap-2 border-b border-outline-variant/30 dark:border-slate-800 pb-3">
+            <button class="tab-btn active px-4 py-2 rounded-lg font-bold text-xs bg-primary text-on-primary shadow-sm hover:brightness-110 transition-all" onclick="switchReportTab(event, 'tab-kunjungan')">
+              1. Kunjungan Bulanan
+            </button>
+            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-layanan')">
+              2. Layanan Terlaris
+            </button>
+            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-pasien')">
+              3. Pasien Teraktif
+            </button>
+            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-stok')">
+              4. Stok Minimum
+            </button>
+            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-pendapatan')">
+              5. Pendapatan Tahunan
+            </button>
+          </div>
+
+          <!-- Tab Contents -->
+          <div class="report-content-wrapper mt-lg">
+            
+            <!-- Tab 1: Kunjungan Bulanan -->
+            <div id="tab-kunjungan" class="report-tab-panel space-y-md">
+              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Kunjungan Bulanan (v_laporan_kunjungan_bulanan)</h3>
+              <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
+                <?php renderReportTable($v_kunjungan_bulanan); ?>
+              </div>
+            </div>
+
+            <!-- Tab 2: Layanan Terlaris -->
+            <div id="tab-layanan" class="report-tab-panel hidden space-y-md">
+              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Layanan &amp; Perawatan Terlaris (v_laporan_layanan_terlaris)</h3>
+              <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
+                <?php renderReportTable($v_layanan_terlaris); ?>
+              </div>
+            </div>
+
+            <!-- Tab 3: Pasien Teraktif -->
+            <div id="tab-pasien" class="report-tab-panel hidden space-y-md">
+              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Pelanggan/Pasien Teraktif (v_laporan_pasien_teraktif)</h3>
+              <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
+                <?php renderReportTable($v_pasien_teraktif); ?>
+              </div>
+            </div>
+
+            <!-- Tab 4: Stok Minimum -->
+            <div id="tab-stok" class="report-tab-panel hidden space-y-md">
+              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Peringatan Stok Minimum Obat (v_laporan_stok_minimum)</h3>
+              <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
+                <?php renderReportTable($v_stok_minimum); ?>
+              </div>
+            </div>
+
+            <!-- Tab 5: Pendapatan Tahunan -->
+            <div id="tab-pendapatan" class="report-tab-panel hidden space-y-md">
+              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Pendapatan Tahunan (v_laporan_pendapatan_tahunan)</h3>
+              <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
+                <?php renderReportTable($v_pendapatan_tahunan); ?>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </main>
     </div>
 
@@ -611,6 +746,28 @@ function formatRupiah($angka) {
       if (dateDisplay) {
         const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
         dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
+      }
+
+      // Tab switching logic for executive reports
+      function switchReportTab(event, tabId) {
+        // Hide all report panels
+        const panels = document.querySelectorAll('.report-tab-panel');
+        panels.forEach(panel => panel.classList.add('hidden'));
+
+        // Show selected panel
+        const activePanel = document.getElementById(tabId);
+        if (activePanel) activePanel.classList.remove('hidden');
+
+        // Reset all buttons style classes
+        const buttons = document.querySelectorAll('.tab-btn');
+        buttons.forEach(btn => {
+          btn.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm', 'hover:brightness-110');
+          btn.classList.add('bg-surface-container-low', 'dark:bg-slate-800', 'text-on-surface-variant', 'dark:text-slate-300', 'hover:bg-surface-container-high', 'dark:hover:bg-slate-700');
+        });
+
+        // Add active style classes to clicked button
+        event.currentTarget.classList.remove('bg-surface-container-low', 'dark:bg-slate-800', 'text-on-surface-variant', 'dark:text-slate-300', 'hover:bg-surface-container-high', 'dark:hover:bg-slate-700');
+        event.currentTarget.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'hover:brightness-110');
       }
     </script>
   </body>
