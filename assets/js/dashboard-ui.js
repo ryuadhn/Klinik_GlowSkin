@@ -195,9 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(`Reservasi atas nama ${patient} berhasil disimpan!`);
     apptForm.reset();
 
-    // Dynamically insert into the table if it's index.html
+    // Dynamically insert into the table if it's index.php or index.html
     const tbody = document.querySelector('table tbody');
-    if (tbody && (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/dashboard-admin/'))) {
+    if (tbody && (window.location.pathname.includes('index.php') || window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/dashboard-admin/'))) {
       const tr = document.createElement('tr');
       tr.className = "text-on-surface-variant dark:text-slate-300 border-b border-outline-variant/10 dark:border-slate-800/30";
       

@@ -29,64 +29,82 @@ $tanggal_pilihan = $_GET['tanggal'] ?? date('Y-m-d');
  * - tanggal_kunjungan = tanggal pilihan
  * - id_status = 1 (status "Menunggu")
  */
-try {
-    $stmt_antrean = $pdo->prepare("
-        SELECT
-            k.id_kunjungan,
-            k.no_antrian,
-            p.nama_lengkap,
-            k.keluhan_utama
-        FROM kunjungan k
-        JOIN pasien p ON k.id_pasien = p.id_pasien
-        WHERE k.id_dokter = :id_dokter
-          AND DATE(k.tanggal_kunjungan) = :tanggal
-          AND k.id_status = 1
-        ORDER BY k.no_antrian ASC
-    ");
-    $stmt_antrean->execute([
-        ':id_dokter' => 1,
-        ':tanggal'   => $tanggal_pilihan
-    ]);
-    $daftar_antrean = $stmt_antrean->fetchAll();
-} catch (PDOException $e) {
-    $daftar_antrean = []; // Array kosong jika query gagal
-}
-
 /**
- * --- HITUNG STATISTIK CEPAT UNTUK CARD RINGKASAN ---
+ * ============================================================
+ * QUERY DASHBOARD 2: RINGKASAN & DAFTAR ANTREAN PASIEN DOKTER
+ * ============================================================
+ * Menggunakan Stored Procedure untuk mengambil data:
+ * - sp_dashboard_dokter_cards(1) -> Statistik Janji Temu dr. Sarah
+ * - sp_dashboard_dokter_antrian(1) -> Antrean Pasien dr. Sarah hari ini
+ * - Kunjungan Map -> Untuk memetakan no_antrian ke id_kunjungan
  */
-// Total janji temu hari ini/tanggal terpilih (semua status)
+
+// 1. Panggil Procedure/Query Statistik Card
 try {
-    $stmt_total = $pdo->prepare("
-        SELECT COUNT(*) AS total FROM kunjungan
-        WHERE id_dokter = :id_dokter AND DATE(tanggal_kunjungan) = :tanggal
-    ");
-    $stmt_total->execute([
-        ':id_dokter' => 1,
-        ':tanggal'   => $tanggal_pilihan
-    ]);
-    $total_janji = $stmt_total->fetch()['total'] ?? 0;
+    if ($tanggal_pilihan == date('Y-m-d')) {
+        $stmt_doc_cards = $pdo->query("CALL sp_dashboard_dokter_cards(1)");
+        $doc_cards = $stmt_doc_cards->fetch() ?: [];
+        $stmt_doc_cards->closeCursor();
+        $total_janji = $doc_cards['pasien_hari_ini'] ?? 0;
+        $total_menunggu = $doc_cards['menunggu_antrian'] ?? 0;
+        $total_selesai = $doc_cards['sudah_diperiksa'] ?? 0;
+    } else {
+        // Query dinamis untuk hari selain hari ini
+        $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND tanggal_kunjungan = ?");
+        $stmt_total->execute([$tanggal_pilihan]);
+        $total_janji = $stmt_total->fetchColumn() ?: 0;
+
+        $stmt_menunggu = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND id_status = 1 AND tanggal_kunjungan = ?");
+        $stmt_menunggu->execute([$tanggal_pilihan]);
+        $total_menunggu = $stmt_menunggu->fetchColumn() ?: 0;
+
+        $stmt_selesai = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND id_status = 3 AND tanggal_kunjungan = ?");
+        $stmt_selesai->execute([$tanggal_pilihan]);
+        $total_selesai = $stmt_selesai->fetchColumn() ?: 0;
+    }
 } catch (PDOException $e) {
     $total_janji = 0;
-}
-
-// Selesai konsultasi hari ini/tanggal terpilih (id_status = 3, Selesai)
-try {
-    $stmt_selesai = $pdo->prepare("
-        SELECT COUNT(*) AS total FROM kunjungan
-        WHERE id_dokter = :id_dokter AND DATE(tanggal_kunjungan) = :tanggal AND id_status = 3
-    ");
-    $stmt_selesai->execute([
-        ':id_dokter' => 1,
-        ':tanggal'   => $tanggal_pilihan
-    ]);
-    $total_selesai = $stmt_selesai->fetch()['total'] ?? 0;
-} catch (PDOException $e) {
+    $total_menunggu = 0;
     $total_selesai = 0;
 }
 
-// Menunggu antrean (id_status = 1)
-$total_menunggu = count($daftar_antrean);
+// 2. Panggil Procedure/Query Daftar Antrean Pasien
+try {
+    if ($tanggal_pilihan == date('Y-m-d')) {
+        $stmt_antrean = $pdo->query("CALL sp_dashboard_dokter_antrian(1)");
+        $daftar_antrean = $stmt_antrean->fetchAll();
+        $stmt_antrean->closeCursor();
+    } else {
+        $stmt_antrean = $pdo->prepare("
+            SELECT 
+                k.no_antrian,
+                p.nama_lengkap,
+                fn_hitung_umur(p.tanggal_lahir) AS umur,
+                jk.nama AS jenis_kelamin,
+                k.keluhan_utama,
+                sk.nama AS status
+            FROM kunjungan k
+            JOIN pasien p ON k.id_pasien = p.id_pasien
+            JOIN ref_jenis_kelamin jk ON p.id_jenis_kelamin = jk.id
+            JOIN ref_status_kunjungan sk ON k.id_status = sk.id
+            WHERE k.id_dokter = 1 AND k.tanggal_kunjungan = ?
+            ORDER BY k.no_antrian
+        ");
+        $stmt_antrean->execute([$tanggal_pilihan]);
+        $daftar_antrean = $stmt_antrean->fetchAll();
+    }
+} catch (PDOException $e) {
+    $daftar_antrean = [];
+}
+
+// 3. Map no_antrian ke id_kunjungan untuk Aksi Input Rekam Medis
+$kunjungan_map = [];
+try {
+    $stmt_map = $pdo->query("SELECT no_antrian, id_kunjungan FROM kunjungan WHERE id_dokter = 1 AND tanggal_kunjungan = CURDATE()");
+    $kunjungan_map = $stmt_map->fetchAll(PDO::FETCH_KEY_PAIR);
+} catch (PDOException $e) {
+    // Abaikan jika gagal
+}
 ?>
 <!DOCTYPE html>
 <html class="light" lang="id">
@@ -357,15 +375,15 @@ $total_menunggu = count($daftar_antrean);
                * sesuai spesifikasi yang diminta.
                */
               ?>
-              <section class="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden shadow-sm">
-                <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/50 flex justify-between items-center">
+              <section class="bg-surface-container-lowest border border-outline-variant dark:border-none rounded-2xl overflow-hidden shadow-sm">
+                <div class="px-lg py-md border-b border-outline-variant dark:border-none bg-surface-container-low/50 flex justify-between items-center">
                   <h5 class="font-title-sm text-sm font-bold text-on-surface uppercase tracking-wide">Daftar Antrean Pasien</h5>
                   <a href="riwayat-pasien.php" class="text-primary font-bold text-xs hover:underline flex items-center gap-xs">Lihat Semua</a>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-surface-container-low/50">
-                      <tr class="bg-surface-container-lowest border-b border-outline-variant">
+                      <tr class="bg-surface-container-lowest border-b border-outline-variant dark:border-none">
                         <th class="px-lg py-md font-label-caps text-on-surface-variant uppercase text-[11px]">No Antrian</th>
                         <th class="px-lg py-md font-label-caps text-on-surface-variant uppercase text-[11px]">Nama Pasien</th>
                         <th class="px-lg py-md font-label-caps text-on-surface-variant uppercase text-[11px]">Keluhan Utama</th>
@@ -373,7 +391,7 @@ $total_menunggu = count($daftar_antrean);
                         <th class="px-lg py-md font-label-caps text-on-surface-variant uppercase text-[11px] text-right">Aksi</th>
                       </tr>
                     </thead>
-                    <tbody class="divide-y divide-outline-variant/30 dark:divide-outline/30">
+                    <tbody class="divide-y divide-outline-variant/30 dark:divide-y-0">
                       <?php
                       /**
                        * --- PERULANGAN FOREACH: MENAMPILKAN BARIS ANTREAN ---
@@ -405,11 +423,11 @@ $total_menunggu = count($daftar_antrean);
                               }
                       ?>
                         <!-- Baris data pasien yang menunggu -->
-                        <tr class="hover:bg-primary/5 dark:hover:bg-primary-container/10 transition-colors">
+                        <tr class="odd:bg-transparent even:bg-surface-container-low/20 dark:even:bg-slate-800/20 hover:bg-primary/5 dark:hover:bg-primary-container/10 transition-colors">
                           <!-- Nomor Antrian -->
                           <td class="px-lg py-md text-sm font-semibold">
                             <span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
-                              #<?= htmlspecialchars($antrian['no_antrian']) ?>
+                              <?= htmlspecialchars($antrian['no_antrian']) ?>
                             </span>
                           </td>
                           <!-- Nama Pasien dengan Avatar Inisial -->
@@ -425,26 +443,36 @@ $total_menunggu = count($daftar_antrean);
                           <td class="px-lg py-md text-sm text-on-surface-variant max-w-[200px] truncate">
                             <?= htmlspecialchars(mb_strimwidth($antrian['keluhan_utama'] ?? '-', 0, 50, '...')) ?>
                           </td>
-                          <!-- Status: Menunggu -->
+                          <!-- Status dari Database View -->
                           <td class="px-lg py-md">
+                            <?php
+                            $status_dot = 'bg-amber-500';
+                            if ($antrian['status'] === 'Selesai') {
+                                $status_dot = 'bg-green-500';
+                            } elseif ($antrian['status'] === 'Sedang Diperiksa') {
+                                $status_dot = 'bg-blue-500';
+                            } elseif ($antrian['status'] === 'Batal') {
+                                $status_dot = 'bg-red-500';
+                            }
+                            ?>
                             <div class="flex items-center gap-1.5">
-                              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                              <span class="text-xs font-medium text-on-surface-variant">Menunggu</span>
+                              <span class="w-2 h-2 rounded-full <?= $status_dot ?>"></span>
+                              <span class="text-xs font-medium text-on-surface-variant"><?= htmlspecialchars($antrian['status']) ?></span>
                             </div>
                           </td>
                           <!-- Tombol Aksi: Link ke Input Rekam Medis -->
                           <td class="px-lg py-md text-right">
                             <?php
-                            /**
-                             * PENTING: Link menggunakan parameter 'id_kunjungan'
-                             * (bukan id_pasien). Ini sesuai spesifikasi agar form
-                             * rekam medis tahu kunjungan mana yang sedang diproses.
-                             */
+                            $id_kunjungan = $kunjungan_map[$antrian['no_antrian']] ?? 0;
+                            if ($antrian['status'] !== 'Selesai' && $antrian['status'] !== 'Batal' && $id_kunjungan > 0) :
                             ?>
-                            <a href="input-rekam-medis.php?id_kunjungan=<?= $antrian['id_kunjungan'] ?>" class="inline-flex items-center gap-1 px-4 py-1.5 bg-primary text-on-primary text-xs font-bold rounded hover:brightness-110 transition-all">
-                              <span class="material-symbols-outlined text-[14px]">edit_note</span>
-                              Input Rekam Medis
-                            </a>
+                              <a href="input-rekam-medis.php?id_kunjungan=<?= $id_kunjungan ?>" class="inline-flex items-center gap-1 px-4 py-1.5 bg-primary text-on-primary text-xs font-bold rounded hover:brightness-110 transition-all">
+                                <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                                Input Rekam Medis
+                              </a>
+                            <?php else : ?>
+                              <span class="text-xs text-on-surface-variant/60 font-medium">Tidak ada aksi</span>
+                            <?php endif; ?>
                           </td>
                         </tr>
                       <?php

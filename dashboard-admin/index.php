@@ -30,55 +30,35 @@ $tanggal_pilihan = $_GET['tanggal'] ?? date('Y-m-d');
  * halaman tetap bisa ditampilkan dengan nilai default 0.
  */
 
-// --- QUERY 1A: TOTAL PASIEN TERDAFTAR ---
-// Menghitung jumlah seluruh baris di tabel 'pasien'.
+// --- QUERY DASHBOARD 1: RINGKASAN CARD ATAS (MENGGUNAKAN VIEW v_dashboard_admin_cards) ---
 try {
-    $stmt_total_pasien = $pdo->query("SELECT COUNT(*) AS total FROM pasien");
-    $total_pasien = $stmt_total_pasien->fetch()['total'] ?? 0;
-} catch (PDOException $e) {
-    $total_pasien = 0; // Nilai default jika query gagal
-}
+    if ($tanggal_pilihan == date('Y-m-d')) {
+        $stmt_cards = $pdo->query("SELECT * FROM v_dashboard_admin_cards");
+        $admin_cards = $stmt_cards->fetch() ?: [];
+        $total_pasien = $admin_cards['total_pasien'] ?? 0;
+        $kunjungan_hari_ini = $admin_cards['kunjungan_hari_ini'] ?? 0;
+        $pendapatan_bulan_ini = $admin_cards['pendapatan_bulan_ini'] ?? 0;
+        $obat_restock = $admin_cards['obat_perlu_restock'] ?? 0;
+    } else {
+        // Query dinamis berdasarkan tanggal pilihan
+        $stmt_total_pasien = $pdo->query("SELECT COUNT(*) FROM pasien");
+        $total_pasien = $stmt_total_pasien->fetchColumn() ?: 0;
 
-// --- QUERY 1B: KUNJUNGAN HARI INI / TANGGAL TERPILIH ---
-// Menghitung jumlah kunjungan yang tanggal_kunjungannya = tanggal pilihan.
-try {
-    $stmt_kunjungan_hari_ini = $pdo->prepare("
-        SELECT COUNT(*) AS total
-        FROM kunjungan
-        WHERE DATE(tanggal_kunjungan) = :tanggal
-    ");
-    $stmt_kunjungan_hari_ini->execute([':tanggal' => $tanggal_pilihan]);
-    $kunjungan_hari_ini = $stmt_kunjungan_hari_ini->fetch()['total'] ?? 0;
+        $stmt_kunjungan = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE tanggal_kunjungan = ?");
+        $stmt_kunjungan->execute([$tanggal_pilihan]);
+        $kunjungan_hari_ini = $stmt_kunjungan->fetchColumn() ?: 0;
+
+        $stmt_pendapatan = $pdo->prepare("SELECT COALESCE(SUM(grand_total), 0) FROM pembayaran WHERE status_bayar = 'lunas' AND MONTH(tanggal_bayar) = MONTH(?) AND YEAR(tanggal_bayar) = YEAR(?)");
+        $stmt_pendapatan->execute([$tanggal_pilihan, $tanggal_pilihan]);
+        $pendapatan_bulan_ini = $stmt_pendapatan->fetchColumn() ?: 0;
+
+        $stmt_restock = $pdo->query("SELECT COUNT(*) FROM obat WHERE stok <= stok_minimum AND is_active = TRUE");
+        $obat_restock = $stmt_restock->fetchColumn() ?: 0;
+    }
 } catch (PDOException $e) {
+    $total_pasien = 0;
     $kunjungan_hari_ini = 0;
-}
-
-// --- QUERY 1C: PENDAPATAN BULAN INI ---
-// Menjumlahkan (SUM) kolom 'grand_total' di tabel 'pembayaran'
-// yang dibuat pada bulan dan tahun yang sama dengan saat ini.
-try {
-    $stmt_pendapatan = $pdo->query("
-        SELECT COALESCE(SUM(grand_total), 0) AS total_pendapatan
-        FROM pembayaran
-        WHERE MONTH(tanggal_bayar) = MONTH(CURDATE())
-          AND YEAR(tanggal_bayar)  = YEAR(CURDATE())
-    ");
-    $pendapatan_bulan_ini = $stmt_pendapatan->fetch()['total_pendapatan'] ?? 0;
-} catch (PDOException $e) {
     $pendapatan_bulan_ini = 0;
-}
-
-// --- QUERY 1D: OBAT/PRODUK PERLU RESTOCK ---
-// Menghitung jumlah obat di tabel 'obat' yang stoknya
-// kurang dari atau sama dengan batas minimum (stok_minimum).
-try {
-    $stmt_restock = $pdo->query("
-        SELECT COUNT(*) AS total
-        FROM obat
-        WHERE stok <= stok_minimum
-    ");
-    $obat_restock = $stmt_restock->fetch()['total'] ?? 0;
-} catch (PDOException $e) {
     $obat_restock = 0;
 }
 
@@ -123,28 +103,32 @@ try {
  * dan detail_layanan untuk memunculkan profil lengkap pendaftar.
  */
 try {
-    $stmt_recent = $pdo->query("
-        SELECT
-            p.nama_lengkap AS nama_pasien,
-            p.no_telepon,
-            COALESCE(GROUP_CONCAT(l.nama_layanan SEPARATOR ', '), 'Konsultasi Umum') AS jenis_perawatan,
-            d.nama_lengkap AS nama_dokter,
-            k.tanggal_kunjungan,
-            k.waktu_daftar,
-            rsk.nama AS status_nama,
-            rsk.warna AS status_warna
-        FROM kunjungan k
-        JOIN pasien p ON k.id_pasien = p.id_pasien
-        JOIN dokter d ON k.id_dokter = d.id_dokter
-        JOIN ref_status_kunjungan rsk ON k.id_status = rsk.id
-        LEFT JOIN detail_layanan dl ON k.id_kunjungan = dl.id_kunjungan
-        LEFT JOIN layanan l ON dl.id_layanan = l.id_layanan
-        GROUP BY k.id_kunjungan
-        ORDER BY k.tanggal_kunjungan DESC, k.waktu_daftar DESC, k.id_kunjungan DESC
-    ");
-    $recent_reservations = $stmt_recent->fetchAll();
+    if ($tanggal_pilihan == date('Y-m-d')) {
+        $stmt_antrian = $pdo->query("SELECT * FROM v_dashboard_admin_antrian");
+        $antrian_pasien = $stmt_antrian->fetchAll();
+    } else {
+        // Query dinamis berdasarkan tanggal pilihan
+        $stmt_antrian = $pdo->prepare("
+            SELECT 
+                k.no_antrian,
+                p.kode_pasien,
+                p.nama_lengkap,
+                d.nama_lengkap AS dokter,
+                k.keluhan_utama,
+                sk.nama AS status,
+                k.waktu_daftar
+            FROM kunjungan k
+            JOIN pasien p ON k.id_pasien = p.id_pasien
+            JOIN dokter d ON k.id_dokter = d.id_dokter
+            JOIN ref_status_kunjungan sk ON k.id_status = sk.id
+            WHERE k.tanggal_kunjungan = ?
+            ORDER BY k.no_antrian
+        ");
+        $stmt_antrian->execute([$tanggal_pilihan]);
+        $antrian_pasien = $stmt_antrian->fetchAll();
+    }
 } catch (PDOException $e) {
-    $recent_reservations = [];
+    $antrian_pasien = [];
 }
 
 // --- FUNGSI HELPER: FORMAT ANGKA RUPIAH ---
@@ -187,7 +171,7 @@ try {
 function renderReportTable($view_data) {
     if (!empty($view_data)) {
         echo '<table class="w-full text-left border-collapse">';
-        echo '  <thead class="sticky top-0 bg-surface-container-low dark:bg-[#1e293b] text-label-caps text-on-surface-variant dark:text-slate-400 border-b border-outline-variant/30 dark:border-slate-800">';
+        echo '  <thead class="sticky top-0 bg-surface-container-low dark:bg-[#1e293b] text-label-caps text-on-surface-variant dark:text-slate-400 border-b border-outline-variant/30 dark:border-transparent">';
         echo '    <tr>';
         // Ambil header kolom secara dinamis dari keys baris pertama
         foreach (array_keys($view_data[0]) as $col_name) {
@@ -195,9 +179,9 @@ function renderReportTable($view_data) {
         }
         echo '    </tr>';
         echo '  </thead>';
-        echo '  <tbody class="divide-y divide-outline-variant/20 dark:divide-slate-800/50 text-body-sm">';
+        echo '  <tbody class="divide-y divide-outline-variant/20 dark:divide-y-0 text-body-sm">';
         foreach ($view_data as $row) {
-            echo '  <tr class="text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-low/40 dark:hover:bg-slate-800/40 transition-colors">';
+            echo '  <tr class="text-on-surface-variant dark:text-slate-300 odd:bg-transparent even:bg-surface-container-low/10 dark:even:bg-slate-800/20 hover:bg-surface-container-low/40 dark:hover:bg-slate-800/40 transition-colors">';
             foreach ($row as $val) {
                 // Formatting Rupiah jika nilai berupa angka besar dan kolom terkait keuangan
                 if (is_numeric($val) && (strpos($val, '.') !== false || $val > 1000) && ($val == (float)$val)) {
@@ -473,7 +457,7 @@ function renderReportTable($view_data) {
               <div>
                 <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Pendapatan Bulan Ini</p>
                 <!-- DATA LIVE: Menampilkan SUM grand_total dari tabel transaksi -->
-                <h3 class="text-2xl font-bold text-on-surface dark:text-slate-100 mt-1"><?= formatRupiah($pendapatan_bulan_ini) ?></h3>
+                <h3 class="text-2xl font-bold text-on-surface dark:text-slate-100 mt-1 whitespace-nowrap"><?= formatRupiah($pendapatan_bulan_ini) ?></h3>
               </div>
               <p class="text-xs text-green-600 dark:text-green-400 flex items-center gap-xs">
                 <span class="material-symbols-outlined text-[14px]">trending_up</span>
@@ -524,13 +508,13 @@ function renderReportTable($view_data) {
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
-                <tr class="border-b border-outline-variant/30 dark:border-slate-800 text-label-caps text-on-surface-variant dark:text-slate-400">
+                <tr class="border-b border-outline-variant/30 dark:border-transparent text-label-caps text-on-surface-variant dark:text-slate-400">
                   <th class="py-md">No</th>
                   <th class="py-md">Nama Layanan / Perawatan</th>
                   <th class="py-md">Jumlah Transaksi</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-outline-variant/20 dark:divide-slate-800/50 text-body-sm">
+              <tbody class="divide-y divide-outline-variant/20 dark:divide-y-0 text-body-sm">
                 <?php
                 /**
                  * --- PERULANGAN FOREACH: MENAMPILKAN DATA TOP 3 PERAWATAN ---
@@ -551,7 +535,7 @@ function renderReportTable($view_data) {
                     $nomor = 1;
                     foreach ($top_perawatan as $perawatan) :
                 ?>
-                  <tr class="text-on-surface-variant dark:text-slate-300">
+                  <tr class="text-on-surface-variant dark:text-slate-300 odd:bg-transparent even:bg-surface-container-low/10 dark:even:bg-slate-800/10 transition-colors">
                     <!-- Nomor Urut -->
                     <td class="py-md font-bold text-on-surface dark:text-slate-100"><?= $nomor++ ?></td>
                     <!-- Nama Layanan dari database -->
@@ -572,12 +556,12 @@ function renderReportTable($view_data) {
           </div>
         </div>
 
-        <!-- Recent Reservations Table (tetap statis sebagai placeholder) -->
-        <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-2xl p-xl shadow-sm space-y-md">
+        <!-- Antrean Pasien Hari Ini (Menggunakan View v_dashboard_admin_antrian) -->
+        <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-none rounded-2xl p-xl shadow-sm space-y-md">
           <div class="flex justify-between items-center">
             <div>
-              <h2 class="font-title-sm text-title-sm font-bold text-on-surface dark:text-slate-100">Reservasi Terbaru</h2>
-              <p class="text-body-sm text-on-surface-variant dark:text-slate-400">Menampilkan booking aktif terbaru dari pasien.</p>
+              <h2 class="font-title-sm text-title-sm font-bold text-on-surface dark:text-slate-100">Antrean Pasien Hari Ini</h2>
+              <p class="text-body-sm text-on-surface-variant dark:text-slate-400">Menampilkan antrean pasien aktif untuk hari ini dari database view.</p>
             </div>
             <button class="border border-outline dark:border-slate-700 px-md py-sm rounded-lg font-title-sm text-body-sm dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all">
               Lihat Semua
@@ -587,64 +571,54 @@ function renderReportTable($view_data) {
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
-                <tr class="border-b border-outline-variant/30 dark:border-slate-800 text-label-caps text-on-surface-variant dark:text-slate-400">
+                <tr class="border-b border-outline-variant/30 dark:border-transparent text-label-caps text-on-surface-variant dark:text-slate-400">
+                  <th class="py-md">No. Antrean</th>
+                  <th class="py-md">Kode Pasien</th>
                   <th class="py-md">Nama Pasien</th>
-                  <th class="py-md">WhatsApp / HP</th>
-                  <th class="py-md">Jenis Perawatan</th>
                   <th class="py-md">Dokter</th>
-                  <th class="py-md">Tanggal &amp; Waktu</th>
+                  <th class="py-md">Keluhan Utama</th>
+                  <th class="py-md">Waktu Daftar</th>
                   <th class="py-md">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-outline-variant/20 dark:divide-slate-800/50 text-body-sm">
+              <tbody class="divide-y divide-outline-variant/20 dark:divide-y-0 text-body-sm">
                 <?php
-                /**
-                 * ============================================================
-                 * BLOK PHP: DAFTAR RESERVASI TERBARU (DATA LIVE)
-                 * ============================================================
-                 * Menampilkan 5 reservasi teratas yang baru masuk.
-                 * Jika list kosong, tampilkan pesan informatif.
-                 */
-                if (empty($recent_reservations)) :
+                if (empty($antrian_pasien)) :
                 ?>
                   <tr>
-                    <td colspan="6" class="py-md text-center text-on-surface-variant dark:text-slate-400">
-                      Belum ada data reservasi baru saat ini.
+                    <td colspan="7" class="py-md text-center text-on-surface-variant dark:text-slate-400">
+                      Belum ada antrean pasien untuk hari ini.
                     </td>
                   </tr>
                 <?php else :
-                    foreach ($recent_reservations as $reservation) :
-                        // Format tanggal & waktu ke bentuk yang lebih mudah dibaca
-                        $tanggal_raw = strtotime($reservation['tanggal_kunjungan']);
-                        $waktu_raw = strtotime($reservation['waktu_daftar']);
-                        $tanggal_formatted = date('j M Y', $tanggal_raw);
-                        $waktu_formatted = date('H:i', $waktu_raw);
-                        
-                        // Menentukan warna badge status secara dinamis dari database
+                    foreach ($antrian_pasien as $antrian) :
+                        // Menentukan warna badge status secara dinamis
                         $badge_class = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'; // Default: yellow
-                        if ($reservation['status_warna'] === 'green') {
+                        if ($antrian['status'] === 'Selesai') {
                             $badge_class = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-                        } elseif ($reservation['status_warna'] === 'blue') {
+                        } elseif ($antrian['status'] === 'Sedang Diperiksa') {
                             $badge_class = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
-                        } elseif ($reservation['status_warna'] === 'red') {
+                        } elseif ($antrian['status'] === 'Batal') {
                             $badge_class = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
                         }
                 ?>
-                  <tr class="text-on-surface-variant dark:text-slate-300">
+                  <tr class="text-on-surface-variant dark:text-slate-300 odd:bg-transparent even:bg-surface-container-low/10 dark:even:bg-slate-800/10 hover:bg-surface-container-low/20 dark:hover:bg-slate-800/20 transition-colors">
+                    <!-- No. Antrean -->
+                    <td class="py-md font-bold text-on-surface dark:text-slate-100"><?= htmlspecialchars($antrian['no_antrian']) ?></td>
+                    <!-- Kode Pasien -->
+                    <td class="py-md font-mono text-xs"><?= htmlspecialchars($antrian['kode_pasien']) ?></td>
                     <!-- Nama Pasien -->
-                    <td class="py-md font-bold text-on-surface dark:text-slate-100"><?= htmlspecialchars($reservation['nama_pasien']) ?></td>
-                    <!-- WhatsApp -->
-                    <td class="py-md"><?= htmlspecialchars($reservation['no_telepon']) ?></td>
-                    <!-- Jenis Perawatan (dari detail_layanan) -->
-                    <td class="py-md"><?= htmlspecialchars($reservation['jenis_perawatan']) ?></td>
-                    <!-- Dokter yang dipilih -->
-                    <td class="py-md"><?= htmlspecialchars($reservation['nama_dokter']) ?></td>
-                    <!-- Tanggal & Waktu pendaftaran -->
-                    <td class="py-md"><?= "{$tanggal_formatted}, {$waktu_formatted}" ?></td>
-                    <!-- Badge Status Kunjungan -->
+                    <td class="py-md font-bold text-on-surface dark:text-slate-100"><?= htmlspecialchars($antrian['nama_lengkap']) ?></td>
+                    <!-- Dokter -->
+                    <td class="py-md"><?= htmlspecialchars($antrian['dokter']) ?></td>
+                    <!-- Keluhan Utama -->
+                    <td class="py-md max-w-xs truncate" title="<?= htmlspecialchars($antrian['keluhan_utama']) ?>"><?= htmlspecialchars($antrian['keluhan_utama']) ?></td>
+                    <!-- Waktu Daftar -->
+                    <td class="py-md"><?= date('H:i', strtotime($antrian['waktu_daftar'])) ?></td>
+                    <!-- Badge Status -->
                     <td class="py-md">
                       <span class="inline-flex items-center gap-xs px-sm py-1 rounded-full <?= $badge_class ?> font-bold text-[12px]">
-                        <?= htmlspecialchars($reservation['status_nama']) ?>
+                        <?= htmlspecialchars($antrian['status']) ?>
                       </span>
                     </td>
                   </tr>
@@ -662,7 +636,7 @@ function renderReportTable($view_data) {
           <div>
             <h2 class="font-title-sm text-title-sm font-bold text-on-surface dark:text-slate-100 flex items-center gap-2">
               <span class="material-symbols-outlined text-primary text-[24px]">analytics</span>
-              Laporan Manajemen &amp; Eksekutif (Bab VII)
+              Laporan Manajemen &amp; Eksekutif 
             </h2>
             <p class="text-body-sm text-on-surface-variant dark:text-slate-400">
               Kompilasi laporan berbasis Database View untuk kebutuhan pelaporan eksekutif manajemen dan analisis performa klinik.
@@ -672,19 +646,19 @@ function renderReportTable($view_data) {
           <!-- Tab Selector -->
           <div class="flex flex-wrap gap-2 border-b border-outline-variant/30 dark:border-slate-800 pb-3">
             <button class="tab-btn active px-4 py-2 rounded-lg font-bold text-xs bg-primary text-on-primary shadow-sm hover:brightness-110 transition-all" onclick="switchReportTab(event, 'tab-kunjungan')">
-              1. Kunjungan Bulanan
+              Kunjungan Bulanan
             </button>
             <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-layanan')">
-              2. Layanan Terlaris
+              Layanan Terlaris
             </button>
             <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-pasien')">
-              3. Pasien Teraktif
+              Pasien Teraktif
             </button>
             <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-stok')">
-              4. Stok Minimum
+              Stok Minimum
             </button>
             <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-pendapatan')">
-              5. Pendapatan Tahunan
+              Pendapatan Tahunan
             </button>
           </div>
 

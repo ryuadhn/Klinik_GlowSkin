@@ -125,3 +125,9 @@ html {
 .hover-scale:hover {
   transform: translateY(-4px) scale(1.02);
 }
+
+/* Color native calendar indicator in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}

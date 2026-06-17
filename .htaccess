@@ -1,0 +1,7 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Klinik_GlowSkin/
+    
+    # Redirect index.html to index.php globally under Klinik_GlowSkin
+    RewriteRule ^(.*)index\.html$ $1index.php [R=301,L,NC]
+</IfModule>
