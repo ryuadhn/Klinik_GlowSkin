@@ -55,6 +55,37 @@ try {
      */
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
+    // --- SETUP SESSION AUDIT VARIABLES FOR TRIGGERS ---
+    $ip = '127.0.0.1';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($ips[0]);
+    } elseif (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        $ip = $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+        $ip = $_SERVER['REMOTE_ADDR'];
+    }
+    if ($ip === '::1') {
+        $ip = '127.0.0.1';
+    }
+
+    $current_uri = $_SERVER['REQUEST_URI'] ?? '';
+    $source = 'Sistem';
+    if (strpos($current_uri, '/dashboard-dokter/') !== false) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $id_doc = $_SESSION['id_dokter'] ?? 1;
+        $source = ($id_doc == 2) ? 'dr. Adrian, S.Ked' : 'dr. Sarah, Sp.KK';
+    } elseif (strpos($current_uri, '/dashboard-admin/') !== false) {
+        $source = 'Admin Dashboard';
+    } elseif (strpos($current_uri, '/landing-page/') !== false) {
+        $source = 'Landing Page';
+    }
+
+    $stmt_set = $pdo->prepare("SET @current_ip = ?, @current_source = ?");
+    $stmt_set->execute([$ip, $source]);
+
 } catch (PDOException $e) {
     /**
      * Jika koneksi gagal, PDO akan melempar (throw) PDOException.

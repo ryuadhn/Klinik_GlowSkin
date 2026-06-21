@@ -80,6 +80,7 @@ CREATE TABLE pasien (
     no_telepon      VARCHAR(15),
     email           VARCHAR(100),
     alergi          TEXT,
+    kategori        ENUM('reguler', 'member', 'vip') NOT NULL DEFAULT 'reguler',
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (id_jenis_kelamin) REFERENCES ref_jenis_kelamin(id),
@@ -274,6 +275,8 @@ CREATE TABLE audit_log (
     data_baru       JSON,
     id_staf         INT,
     keterangan      TEXT,
+    ip_address      VARCHAR(45),
+    sumber          VARCHAR(50),
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_staf) REFERENCES staf(id_staf)
 );
@@ -290,7 +293,7 @@ CREATE TRIGGER trg_pasien_after_update
 AFTER UPDATE ON pasien
 FOR EACH ROW
 BEGIN
-    INSERT INTO audit_log (nama_tabel, id_record, aksi, data_lama, data_baru, keterangan)
+    INSERT INTO audit_log (nama_tabel, id_record, aksi, data_lama, data_baru, keterangan, ip_address, sumber)
     VALUES (
         'pasien',
         OLD.id_pasien,
@@ -307,7 +310,9 @@ BEGIN
             'alamat', NEW.alamat,
             'email', NEW.email
         ),
-        CONCAT('Data pasien ', OLD.kode_pasien, ' diperbarui')
+        CONCAT('Data pasien ', OLD.kode_pasien, ' diperbarui'),
+        COALESCE(@current_ip, '127.0.0.1'),
+        COALESCE(@current_source, 'Sistem')
     );
 END //
 DELIMITER ;
@@ -331,19 +336,47 @@ END //
 DELIMITER ;
 
 -- ========================================================
--- [SS-LAPORAN: BAB V - TRIGGER 3: UPDATE STATUS KUNJUNGAN]
+-- [SS-LAPORAN: BAB V - TRIGGER 3: UPDATE STATUS KUNJUNGAN & AUDIT LOG]
 -- ========================================================
 DELIMITER //
 CREATE TRIGGER trg_rekam_medis_after_insert
 AFTER INSERT ON rekam_medis
 FOR EACH ROW
 BEGIN
+    DECLARE v_kode_pasien VARCHAR(15);
+    DECLARE v_nama_pasien VARCHAR(100);
+
+    -- Update status kunjungan menjadi selesai (id_status=3)
     UPDATE kunjungan 
     SET id_status = 3, 
         waktu_selesai = CURRENT_TIME()
     WHERE id_kunjungan = NEW.id_kunjungan;
+
+    -- Ambil data kode_pasien dan nama_lengkap
+    SELECT p.kode_pasien, p.nama_lengkap INTO v_kode_pasien, v_nama_pasien
+    FROM kunjungan k
+    JOIN pasien p ON k.id_pasien = p.id_pasien
+    WHERE k.id_kunjungan = NEW.id_kunjungan;
+
+    -- Tulis ke audit log sebagai penambahan data rekam medis sensitif
+    INSERT INTO audit_log (nama_tabel, id_record, aksi, id_staf, data_baru, keterangan, ip_address, sumber)
+    VALUES (
+        'rekam_medis',
+        NEW.id_rekam_medis,
+        'INSERT',
+        NULL,
+        JSON_OBJECT(
+            'id_kunjungan', NEW.id_kunjungan,
+            'anamnesis', NEW.anamnesis,
+            'diagnosa', NEW.diagnosa
+        ),
+        CONCAT('Dokter menginput rekam medis baru untuk pasien ', v_nama_pasien, ' (', v_kode_pasien, ')'),
+        COALESCE(@current_ip, '127.0.0.1'),
+        COALESCE(@current_source, 'Dokter Dashboard')
+    );
 END //
 DELIMITER ;
+
 
 
 
@@ -395,6 +428,7 @@ BEGIN
     DECLARE v_tanggal DATE;
     DECLARE v_kode VARCHAR(20);
     DECLARE v_antrian INT;
+    DECLARE v_global_seq INT;
     
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -407,10 +441,15 @@ BEGIN
     SET v_tanggal = CURDATE();
     START TRANSACTION;
     
+    -- Hitung no_antrian harian per dokter
     SELECT COALESCE(MAX(no_antrian), 0) + 1 INTO v_antrian
     FROM kunjungan WHERE id_dokter = p_id_dokter AND tanggal_kunjungan = v_tanggal;
     
-    SET v_kode = CONCAT('KNJ-', DATE_FORMAT(v_tanggal, '%Y%m%d'), '-', LPAD(v_antrian, 3, '0'));
+    -- Hitung urutan global kunjungan hari ini untuk kode_kunjungan unik
+    SELECT COALESCE(COUNT(*), 0) + 1 INTO v_global_seq
+    FROM kunjungan WHERE tanggal_kunjungan = v_tanggal;
+    
+    SET v_kode = CONCAT('KNJ-', DATE_FORMAT(v_tanggal, '%Y%m%d'), '-', LPAD(v_global_seq, 3, '0'));
     
     INSERT INTO kunjungan (kode_kunjungan, id_pasien, id_dokter, id_staf, tanggal_kunjungan, waktu_daftar, keluhan_utama, no_antrian)
     VALUES (v_kode, p_id_pasien, p_id_dokter, p_id_staf, v_tanggal, CURRENT_TIME(), p_keluhan, v_antrian);
@@ -498,8 +537,8 @@ BEGIN
             LEAVE loop_obat;
         END IF;
         
-        INSERT INTO audit_log (nama_tabel, id_record, aksi, keterangan)
-        VALUES ('obat', v_id_obat, 'UPDATE', CONCAT('⚠️ ALERT STOK: ', v_nama, ' — Stok sisa: ', v_stok, ', Minimum: ', v_minimum, '. Segera restock!'));
+        INSERT INTO audit_log (nama_tabel, id_record, aksi, keterangan, ip_address, sumber)
+        VALUES ('obat', v_id_obat, 'UPDATE', CONCAT('⚠️ ALERT STOK: ', v_nama, ' — Stok sisa: ', v_stok, ', Minimum: ', v_minimum, '. Segera restock!'), '127.0.0.1', 'Sistem');
         SET v_count = v_count + 1;
     END LOOP;
     CLOSE cur_obat;
@@ -534,7 +573,7 @@ INSERT INTO supplier (nama_supplier, alamat, no_telepon, email, kontak_person) V
 
 INSERT INTO dokter (kode_dokter, nama_lengkap, id_spesialisasi, no_str, no_telepon, email) VALUES
 ('DKT-001', 'dr. Sarah Sp.KK', 1, 'STR-1122334455', '08119876541', 'sarah.spkk@glowskin.com'),
-('DKT-002', 'dr. Kevin Estetika', 3, 'STR-5544332211', '08119876542', 'kevin.med@glowskin.com');
+('DKT-002', 'dr. Adrian', 3, 'STR-5544332211', '08119876542', 'adrian.med@glowskin.com');
 
 -- ========================================================
 -- 3. DATA DUMMY: LAYANAN/TREATMENT & OBAT/SKINCARE
@@ -550,7 +589,11 @@ INSERT INTO obat (kode_obat, nama_obat, id_kategori, satuan, harga_jual, harga_b
 ('OBT-002', 'Vitamin C Brightening Serum', 1, 'bottle', 180000.00, 110000.00, 60, 15),
 ('OBT-003', 'Sunscreen SPF 50 PA++++', 2, 'tube', 95000.00, 65000.00, 80, 20),
 ('OBT-004', 'Acne Facial Wash Salicylic Acid', 4, 'pcs', 75000.00, 45000.00, 5, 10), -- Stok kritis untuk ngetes alert!
-('OBT-005', 'Collagen Glow Capsule', 5, 'bottle', 250000.00, 175000.00, 35, 10);
+('OBT-005', 'Collagen Glow Capsule', 5, 'bottle', 250000.00, 175000.00, 35, 10),
+('GS-CLS-001', 'Gentle Foaming Cleanser', 4, 'pcs', 185000.00, 120000.00, 85, 10),
+('GS-SRM-012', 'Brightening Vitamin C Serum', 1, 'bottle', 320000.00, 200000.00, 45, 15),
+('GS-SUN-005', 'UV Shield Daily Sunscreen', 2, 'tube', 215000.00, 140000.00, 8, 10),
+('GS-MST-021', 'Hyaluronic Acid Gel', 2, 'tube', 245000.00, 160000.00, 92, 15);
 
 -- JADWAL DOKTER
 INSERT INTO jadwal_dokter (id_dokter, id_hari, jam_mulai, jam_selesai, kuota_pasien) VALUES
@@ -689,9 +732,9 @@ INSERT INTO stok_masuk (id_obat, id_supplier, jumlah, harga_beli, tanggal_masuk,
 (3, 2, 100, 65000.00, '2026-05-25', 'FKT-MED-2201');
 
 -- ========================================================
--- [SS-LAPORAN: BAB V - AGGREGATE FUNCTIONS (SUM, AVG, MAX, MIN, COUNT)]
+-- [DOKUMENTASI UAS: FUNGSI AGREGAT (SUM, AVG, MAX, MIN, COUNT)]
 -- ========================================================
-
+/*
 -- AGGREGATE 1: SUM — Total pendapatan bulan ini
 SELECT SUM(grand_total) AS total_pendapatan_bulan
 FROM pembayaran
@@ -726,8 +769,7 @@ LEFT JOIN kunjungan k ON d.id_dokter = k.id_dokter
     AND YEAR(k.tanggal_kunjungan) = YEAR(CURDATE())
 GROUP BY d.id_dokter, d.nama_lengkap
 ORDER BY jumlah_kunjungan DESC;
-
-
+*/
 
 
 USE glowskin_db;
@@ -796,7 +838,6 @@ SELECT
     o.stok_minimum,
     (o.stok_minimum - o.stok) AS perlu_restock,
     o.harga_beli,
-    (o.stok_minimum - o.stok) * o.harga_beli AS estimasi_biaya_restock,
     CASE 
         WHEN o.stok = 0 THEN '🔴 HABIS'
         WHEN o.stok <= o.stok_minimum * 0.5 THEN '🟠 KRITIS'
@@ -808,28 +849,35 @@ WHERE o.stok <= o.stok_minimum AND o.is_active = TRUE
 ORDER BY o.stok ASC;
 
 
--- 📊 LAPORAN 5: Pendapatan Tahunan per Bulan
-CREATE OR REPLACE VIEW v_laporan_pendapatan_tahunan AS
+-- 📊 LAPORAN 5: Kategori & Status Pasien (VIP / Reguler)
+-- Kolom 'kategori' diisi manual oleh Admin dari dashboard, atau otomatis naik
+-- ke 'vip' jika total kunjungan >= 5. Default saat daftar: 'reguler'.
+CREATE OR REPLACE VIEW v_laporan_status_pasien AS
 SELECT 
-    MONTHNAME(tanggal_bayar) AS bulan,
-    MONTH(tanggal_bayar) AS bulan_ke,
-    COUNT(*) AS jumlah_transaksi,
-    SUM(total_layanan) AS pendapatan_layanan,
-    SUM(total_obat) AS pendapatan_obat,
-    SUM(grand_total) AS total_pendapatan,
-    ROUND(AVG(grand_total), 0) AS rata_rata,
-    MAX(grand_total) AS tertinggi
-FROM pembayaran
-WHERE YEAR(tanggal_bayar) = YEAR(CURDATE())
-AND status_bayar = 'lunas'
-GROUP BY MONTH(tanggal_bayar), MONTHNAME(tanggal_bayar)
-ORDER BY bulan_ke;
+    p.kode_pasien AS id_pasien,
+    p.nama_lengkap AS nama_pasien,
+    CASE
+        WHEN p.kategori = 'vip' THEN 'VIP'
+        WHEN p.kategori = 'member' THEN 'Member'
+        ELSE 'Reguler'
+    END AS kategori_pasien,
+    CONCAT(COUNT(k.id_kunjungan), ' Kali') AS total_kunjungan,
+    CASE
+        WHEN p.no_telepon IS NOT NULL AND p.no_telepon != '' THEN 'Aktif'
+        ELSE 'Tidak Aktif'
+    END AS status_akun
+FROM pasien p
+JOIN kunjungan k ON p.id_pasien = k.id_pasien
+GROUP BY p.id_pasien, p.kode_pasien, p.nama_lengkap, p.kategori, p.no_telepon
+ORDER BY p.kategori DESC, COUNT(k.id_kunjungan) DESC, p.kode_pasien ASC;
 
+/*
 SELECT * FROM v_laporan_kunjungan_bulanan;
 SELECT * FROM v_laporan_layanan_terlaris;
 SELECT * FROM v_laporan_pasien_teraktif;
 SELECT * FROM v_laporan_stok_minimum;
-SELECT * FROM v_laporan_pendapatan_tahunan;
+SELECT * FROM v_laporan_status_pasien;
+*/
 
 
 -- 🖥️ DASHBOARD 1: VIEW UNTUK SUMMARY CARD ADMIN
@@ -890,6 +938,7 @@ BEGIN
 END //
 DELIMITER ;
 
+/*
 -- Cek Data Dashboard Admin
 SELECT * FROM v_dashboard_admin_cards;
 SELECT * FROM v_dashboard_admin_antrian;
@@ -897,12 +946,13 @@ SELECT * FROM v_dashboard_admin_antrian;
 -- Cek Data Dashboard Dokter (Misal untuk id_dokter = 1 alias dr. Sarah)
 CALL sp_dashboard_dokter_cards(1);
 CALL sp_dashboard_dokter_antrian(1);
+*/
 
 
 -- ========================================================
 -- [SS-LAPORAN: BAB V - TCL TRANSACTION DEMO (COMMIT & ROLLBACK)]
 -- ========================================================
-
+/*
 -- Skenario 1: COMMIT (Transaksi pendaftaran kunjungan berhasil)
 START TRANSACTION;
 
@@ -926,8 +976,6 @@ VALUES ('PAY-DEMO-TCL-OK', @last_kunjungan_id, 150000.00, 150000.00, 1);
 COMMIT;
 
 -- Skenario 2: ROLLBACK (Transaksi dibatalkan karena ada kegagalan)
--- (Dibungkus dalam komentar agar tidak menggagalkan proses import skrip)
-/*
 START TRANSACTION;
 INSERT INTO kunjungan (kode_kunjungan, id_pasien, id_dokter, id_staf, tanggal_kunjungan, 
                        waktu_daftar, keluhan_utama, no_antrian)
@@ -941,7 +989,7 @@ ROLLBACK;
 -- ========================================================
 -- [SS-LAPORAN: BAB V - CONCURRENCY & TABLE/ROW LOCKING DEMO]
 -- ========================================================
-
+/*
 -- --- 1. TABLE WRITE LOCK (Mencegah modifikasi tabel oleh user lain) ---
 LOCK TABLES obat WRITE;
 -- Session ini bisa mengupdate data obat
@@ -957,6 +1005,27 @@ SELECT * FROM obat WHERE id_obat = 1 FOR UPDATE;
 UPDATE obat SET stok = stok - 1 WHERE id_obat = 1;
 -- Melepas row lock dengan COMMIT
 COMMIT;
+*/
+
+
+-- ========================================================
+-- TABEL ULASAN PASIEN (Fitur Landing Page)
+-- ========================================================
+CREATE TABLE IF NOT EXISTS ulasan_pasien (
+    id_ulasan       INT AUTO_INCREMENT PRIMARY KEY,
+    nama_pasien     VARCHAR(100) NOT NULL,
+    layanan_diambil VARCHAR(100) NOT NULL,
+    rating          TINYINT NOT NULL DEFAULT 5 CHECK (rating BETWEEN 1 AND 5),
+    isi_ulasan      TEXT NOT NULL,
+    is_approved     BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Data awal ulasan
+INSERT INTO ulasan_pasien (nama_pasien, layanan_diambil, rating, isi_ulasan, is_approved) VALUES
+('Adinda Kirana', 'Laser Therapy', 5, 'Sangat puas dengan Laser Therapy di GlowSkin! Bekas jerawat kemerahan saya yang sudah berbulan-bulan langsung memudar setelah 2 kali sesi. Pelayanannya sangat ramah dan profesional.', TRUE),
+('Citra Lestari', 'Skincare Racikan', 5, 'Dokter Sarah sangat detail saat menganalisis kulit saya. Krim racikan dan serumnya cocok sekali di kulit sensitif saya, tidak ada efek kemerahan atau mengelupas parah. Skin barrier saya sekarang jauh lebih kuat!', TRUE),
+('Fajar Ramadhan', 'Facial Treatment', 5, 'Tempatnya bersih, mewah, dan menenangkan. Facial Treatment di sini terasa seperti relaksasi total dengan pijatan yang nyaman sekali. Komedo bersih tuntas tanpa rasa sakit yang berlebih.', TRUE);
 
 
 -- ========================================================

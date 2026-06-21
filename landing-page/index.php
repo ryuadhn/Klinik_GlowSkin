@@ -16,8 +16,16 @@
 // menghentikan eksekusi jika file tidak ditemukan.
 require_once __DIR__ . '/../koneksi.php';
 
-// --- VARIABEL UNTUK MENAMPUNG PESAN FEEDBACK KE PENGGUNA ---
-$pesan_sukses = '';  // Akan diisi jika pendaftaran berhasil
+// --- TANGGUNG JAWAB SESSION UNTUK POP-UP SEKALI MUNCUL (PRG PATTERN) ---
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$pesan_sukses = $_SESSION['pesan_sukses'] ?? '';
+unset($_SESSION['pesan_sukses']); // Hapus agar tidak muncul kembali saat halaman di-refresh
+
+$pesan_ulasan = $_SESSION['pesan_ulasan'] ?? '';
+unset($_SESSION['pesan_ulasan']);
+
 $pesan_error  = '';  // Akan diisi jika terjadi kesalahan
 
 /**
@@ -33,20 +41,22 @@ $pesan_error  = '';  // Akan diisi jika terjadi kesalahan
  *    antrean kunjungan online pasien tersebut.
  * 5. Tampilkan alert JavaScript jika sukses atau error.
  */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['form_action'])) {
     try {
         // --- LANGKAH 1: Tangkap data dari form via $_POST ---
         // Fungsi trim() digunakan untuk menghapus spasi di awal/akhir input.
         // Fungsi htmlspecialchars() digunakan untuk mencegah serangan XSS.
         $nama_lengkap   = trim(htmlspecialchars($_POST['nama_lengkap'] ?? ''));
         $no_telepon     = trim(htmlspecialchars($_POST['no_telepon'] ?? ''));
+        $tanggal_lahir  = trim(htmlspecialchars($_POST['tanggal_lahir'] ?? ''));
+        $id_jenis_kelamin = intval($_POST['id_jenis_kelamin'] ?? 0);
         $keluhan_utama  = trim(htmlspecialchars($_POST['keluhan_utama'] ?? ''));
         $id_dokter      = intval($_POST['id_dokter'] ?? 1); // Default dokter ID 1 jika tidak dipilih
         $id_layanan     = intval($_POST['id_layanan'] ?? 1); // Default layanan ID 1 (Konsultasi) jika tidak dipilih
 
         // --- VALIDASI SEDERHANA: Pastikan field wajib tidak kosong ---
-        if (empty($nama_lengkap) || empty($no_telepon)) {
-            throw new Exception("Nama lengkap dan nomor telepon wajib diisi!");
+        if (empty($nama_lengkap) || empty($no_telepon) || empty($tanggal_lahir) || empty($id_jenis_kelamin)) {
+            throw new Exception("Nama lengkap, nomor telepon, tanggal lahir, dan jenis kelamin wajib diisi!");
         }
 
         /**
@@ -59,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          * - YYMMDD     = Tanggal hari ini (tahun 2 digit)
          * - XXXX       = 4 karakter random (hex) untuk memastikan keunikan
          */
-        $kode_pasien = 'PS-' . date('ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+         $kode_pasien = 'PS-' . date('ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
 
         /**
          * --- LANGKAH 2B: INSERT DATA PASIEN BARU KE TABEL 'pasien' ---
@@ -70,12 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          */
         $stmt_pasien = $pdo->prepare("
             INSERT INTO pasien (kode_pasien, nama_lengkap, no_telepon, tanggal_lahir, id_jenis_kelamin)
-            VALUES (:kode_pasien, :nama_lengkap, :no_telepon, '1970-01-01', 1)
+            VALUES (:kode_pasien, :nama_lengkap, :no_telepon, :tanggal_lahir, :id_jenis_kelamin)
         ");
         $stmt_pasien->execute([
-            ':kode_pasien'  => $kode_pasien,
-            ':nama_lengkap' => $nama_lengkap,
-            ':no_telepon'   => $no_telepon
+            ':kode_pasien'      => $kode_pasien,
+            ':nama_lengkap'     => $nama_lengkap,
+            ':no_telepon'       => $no_telepon,
+            ':tanggal_lahir'    => $tanggal_lahir,
+            ':id_jenis_kelamin' => $id_jenis_kelamin
         ]);
 
         /**
@@ -113,10 +125,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          */
         $result_sp = $pdo->query("SELECT @kode AS kode_kunjungan, @antrian AS nomor_antrian")->fetch();
 
+        // Ambil info layanan (nama & harga) dari database untuk estimasi biaya pada alert
+        $id_layanan = intval($_POST['id_layanan'] ?? 1);
+        $stmt_lay = $pdo->prepare("SELECT nama_layanan, harga FROM layanan WHERE id_layanan = :id");
+        $stmt_lay->execute([':id' => $id_layanan]);
+        $lay_info = $stmt_lay->fetch(PDO::FETCH_ASSOC);
+        $nama_layanan = $lay_info['nama_layanan'] ?? '-';
+        $harga_satuan = $lay_info['harga'] ?? 0;
+        $harga_format = "Rp " . number_format($harga_satuan, 0, ',', '.');
+
         // Simpan pesan sukses yang akan ditampilkan sebagai JavaScript alert
         $kode_kunj = $result_sp['kode_kunjungan'] ?? '-';
         $no_antri  = $result_sp['nomor_antrian'] ?? '-';
-        $pesan_sukses = "Pendaftaran Berhasil!\\nKode Kunjungan: {$kode_kunj}\\nNomor Antrian Anda: {$no_antri}";
+        $pesan_sukses_msg = "Pendaftaran Berhasil!\\n\\nDetail Kunjungan:\\n- Kode Kunjungan: {$kode_kunj}\\n- Nomor Antrian Anda: {$no_antri}\\n- Perawatan: {$nama_layanan}\\n- Estimasi Biaya: {$harga_format}";
 
         /**
          * --- LANGKAH 5B: SINKRONKAN LAYANAN YANG DIPILIH KE detail_layanan ---
@@ -128,12 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id_kunjungan_baru = $stmt_get_kunj->fetchColumn();
 
             if ($id_kunjungan_baru) {
-                // Ambil harga layanan dari database
-                $stmt_lay = $pdo->prepare("SELECT harga FROM layanan WHERE id_layanan = :id");
-                $stmt_lay->execute([':id' => $id_layanan]);
-                $harga_satuan = $stmt_lay->fetchColumn() ?? 0;
-
-                // Insert ke detail_layanan
+                // Insert ke detail_layanan menggunakan harga yang sudah diambil sebelumnya
                 $stmt_det = $pdo->prepare("
                     INSERT INTO detail_layanan (id_kunjungan, id_layanan, jumlah, harga_satuan, subtotal)
                     VALUES (:id_kunjungan, :id_layanan, 1, :harga, :harga)
@@ -146,6 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Simpan pesan sukses di session dan redirect (PRG Pattern) untuk mencegah alert berulang saat refresh
+        $_SESSION['pesan_sukses'] = $pesan_sukses_msg;
+        header("Location: index.php");
+        exit();
+
     } catch (PDOException $e) {
         // Tangkap error database (query gagal, SP error, dll.)
         $pesan_error = "Terjadi kesalahan database: " . $e->getMessage();
@@ -154,6 +175,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pesan_error = $e->getMessage();
     }
 }
+
+/**
+ * ============================================================
+ * BLOK LOGIKA PHP: MENANGKAP DATA FORM ULASAN (POST)
+ * ============================================================
+ * Blok ini dieksekusi ketika form ulasan dikirim (action=kirim_ulasan).
+ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === 'kirim_ulasan') {
+    try {
+        $nama_pengulas   = trim(htmlspecialchars($_POST['nama_pengulas'] ?? ''));
+        $layanan_review  = trim(htmlspecialchars($_POST['layanan_review'] ?? ''));
+        $rating_review   = intval($_POST['rating_review'] ?? 5);
+        $isi_ulasan      = trim(htmlspecialchars($_POST['isi_ulasan'] ?? ''));
+
+        if (empty($nama_pengulas) || empty($layanan_review) || empty($isi_ulasan)) {
+            throw new Exception("Nama, layanan, dan isi ulasan wajib diisi!");
+        }
+        if ($rating_review < 1 || $rating_review > 5) {
+            $rating_review = 5;
+        }
+
+        $stmt_ulasan = $pdo->prepare("
+            INSERT INTO ulasan_pasien (nama_pasien, layanan_diambil, rating, isi_ulasan, is_approved)
+            VALUES (:nama, :layanan, :rating, :ulasan, TRUE)
+        ");
+        $stmt_ulasan->execute([
+            ':nama'    => $nama_pengulas,
+            ':layanan' => $layanan_review,
+            ':rating'  => $rating_review,
+            ':ulasan'  => $isi_ulasan
+        ]);
+
+        $_SESSION['pesan_ulasan'] = 'sukses';
+        header("Location: index.php#testimonials");
+        exit();
+
+    } catch (PDOException $e) {
+        $pesan_error = "Gagal mengirim ulasan: " . $e->getMessage();
+    } catch (Exception $e) {
+        $pesan_error = $e->getMessage();
+    }
+}
+
+// --- QUERY DAFTAR LAYANAN DAN DOKTER UNTUK DROPDOWN FORM ---
+try {
+    $daftar_layanan = $pdo->query("SELECT id_layanan, nama_layanan, id_jenis_layanan FROM layanan WHERE is_active = TRUE ORDER BY id_layanan ASC")->fetchAll();
+    $daftar_dokter = $pdo->query("SELECT id_dokter, nama_lengkap FROM dokter WHERE is_active = TRUE ORDER BY id_dokter ASC")->fetchAll();
+    
+    // Group services into categories
+    $js_services = [
+        'laser' => [],
+        'facial' => [],
+        'skincare' => []
+    ];
+    foreach ($daftar_layanan as $lay) {
+        if ($lay['id_jenis_layanan'] == 4) {
+            $js_services['laser'][] = ['id' => $lay['id_layanan'], 'name' => $lay['nama_layanan']];
+        } elseif ($lay['id_jenis_layanan'] == 2 || $lay['id_jenis_layanan'] == 3) {
+            $js_services['facial'][] = ['id' => $lay['id_layanan'], 'name' => $lay['nama_layanan']];
+        } elseif ($lay['id_jenis_layanan'] == 1) {
+            $js_services['skincare'][] = ['id' => $lay['id_layanan'], 'name' => $lay['nama_layanan']];
+        }
+    }
+} catch (PDOException $e) {
+    $daftar_layanan = [];
+    $daftar_dokter = [];
+    $js_services = ['laser' => [], 'facial' => [], 'skincare' => []];
+}
+
+// --- QUERY ULASAN PASIEN DARI DATABASE ---
+try {
+    $daftar_ulasan = $pdo->query("SELECT * FROM ulasan_pasien WHERE is_approved = TRUE ORDER BY created_at DESC LIMIT 12")->fetchAll();
+} catch (PDOException $e) {
+    $daftar_ulasan = [];
+}
 ?>
 <!DOCTYPE html>
 <html class="light" lang="id">
@@ -161,6 +257,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>GlowSkin | Premium Aesthetic Clinic</title>
+
+    <!-- Google Fonts & Material Symbols -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
     <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -291,10 +393,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">spa</span>
           <span class="font-headline-md text-headline-md font-extrabold text-primary dark:text-primary-fixed-dim tracking-tight">GlowSkin</span>
         </div>
-        <nav class="hidden md:flex items-center gap-xl">
+        <nav class="hidden md:flex items-center gap-lg">
           <a class="font-title-sm text-title-sm text-primary font-bold" href="#">Beranda</a>
           <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="#services">Layanan</a>
           <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="#doctors">Dokter</a>
+          <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="#testimonials">Ulasan</a>
+          <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="#faq">FAQ</a>
           <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="#reservation">Reservasi</a>
 
           <a class="font-title-sm text-title-sm text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors" href="../login.html">Portal Staf</a>
@@ -345,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="relative hidden lg:block">
             <div class="rounded-3xl overflow-hidden aspect-[4/5] border border-outline-variant dark:border-outline shadow-xl relative group">
-              <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A serene, professional skincare treatment scene in a high-end medical clinic. A patient with clear, glowing skin lies peacefully while a professional aesthetician in a clinical uniform gently applies a premium serum using specialized tools. The lighting is bright, soft, and sophisticated, emphasizing a clean and sterile medical environment. The color palette features whites, soft teals, and clinical greys, reflecting a luxurious spa-like yet authoritative atmosphere." src="../assets/images/skincare_treatment.png" />
+              <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Perawatan kulit premium di klinik GlowSkin oleh ahli estetika profesional" src="../assets/images/skincare_treatment.png" />
               <div class="absolute bottom-md left-md right-md glass-card p-lg rounded-xl">
                 <div class="flex items-center gap-md">
                   <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-on-primary">
@@ -437,7 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   </div>
                   <div>
                     <p class="font-title-sm text-title-sm text-on-surface">dr. Sarah, Sp.KK</p>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Spesialis Kulit &amp; Kelamin - Anti Aging Expert</p>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">Spesialis Kulit &amp; Kelamin &mdash; Anti-Aging Expert</p>
                   </div>
                 </li>
                 <li class="flex gap-md">
@@ -445,8 +549,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="material-symbols-outlined text-[18px]">check</span>
                   </div>
                   <div>
-                    <p class="font-title-sm text-title-sm text-on-surface">dr. Adrian</p>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Medical Aesthetician - Laser Treatment Specialist</p>
+                    <p class="font-title-sm text-title-sm text-on-surface">dr. Adrian, S.Ked</p>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">Dokter Estetika Medis &mdash; Spesialis Laser Therapy</p>
                   </div>
                 </li>
               </ul>
@@ -454,12 +558,209 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="grid grid-cols-2 gap-md items-start">
               <div class="rounded-2xl overflow-hidden border border-outline-variant">
-                <img class="w-full h-64 object-cover" data-alt="A professional female dermatologist in a clean, crisp white medical coat, smiling warmly in a bright clinical setting. She holds a medical chart and has a stethoscope around her neck. The background is a minimalist, modern clinic interior with soft ivory walls and high-end medical equipment. The atmosphere is professional, empathetic, and trustworthy, conveying medical expertise in a luxurious environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+                <img class="w-full h-64 object-cover" alt="dr. Sarah, Sp.KK - Spesialis Kulit & Kelamin di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
               </div>
               <div class="rounded-2xl overflow-hidden border border-outline-variant mt-xl">
-                <img class="w-full h-64 object-cover" data-alt="A professional male doctor specialized in aesthetic medicine, dressed in a formal white clinical lab coat, standing in a contemporary medical office. He looks confident and welcoming, with high-end laser equipment visible in the background. The lighting is clinical yet warm, highlighting a high-tech medical standard. The color palette is composed of clean whites, teals, and steel greys, creating a sense of advanced medical care." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+                <img class="w-full h-64 object-cover" alt="dr. Adrian, S.Ked - Dokter Estetika Medis di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials Section -->
+      <section class="py-xl bg-surface-container-lowest dark:bg-inverse-surface/30" id="testimonials">
+        <div class="max-w-7xl mx-auto px-xl">
+          <div class="text-center mb-xl">
+            <span class="px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps inline-block mb-xs">TESTIMONIALS</span>
+            <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Ulasan Pasien Setia</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant max-w-2xl mx-auto">
+              Lebih dari sekadar kecantikan, kepuasan dan rasa percaya diri pasien adalah pencapaian terbesar kami.
+            </p>
+          </div>
+
+          <?php if (!empty($pesan_ulasan) && $pesan_ulasan === 'sukses') : ?>
+          <div class="mb-lg p-md bg-primary/10 border border-primary/30 rounded-xl flex items-center gap-md animate-fade-in-up">
+            <span class="material-symbols-outlined text-primary text-2xl">check_circle</span>
+            <p class="font-body-md text-on-surface dark:text-inverse-on-surface">Terima kasih! Ulasan Anda berhasil dikirim. 🎉</p>
+          </div>
+          <?php endif; ?>
+
+                    <!-- Ulasan dari Database -->
+          <div class="relative group/testi max-w-7xl mx-auto px-4 md:px-8">
+            <!-- Left and Right Nav Buttons -->
+            <button type="button" id="prev-testi" class="absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline text-primary hover:bg-primary hover:text-on-primary shadow-lg flex items-center justify-center transition-all z-10 opacity-0 group-hover/testi:opacity-100 focus:opacity-100 focus-visible:opacity-100" aria-label="Sebelumnya">
+              <span class="material-symbols-outlined text-[20px] md:text-[24px]">chevron_left</span>
+            </button>
+            <button type="button" id="next-testi" class="absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline text-primary hover:bg-primary hover:text-on-primary shadow-lg flex items-center justify-center transition-all z-10 opacity-0 group-hover/testi:opacity-100 focus:opacity-100 focus-visible:opacity-100" aria-label="Selanjutnya">
+              <span class="material-symbols-outlined text-[20px] md:text-[24px]">chevron_right</span>
+            </button>
+
+            <!-- Testimonials Slider Container -->
+            <div id="testi-slider" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-md md:gap-lg pb-md select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <?php if (!empty($daftar_ulasan)) : ?>
+                <?php foreach ($daftar_ulasan as $ulasan) : ?>
+                <div class="min-w-full md:min-w-[calc(50%-12px)] lg:min-w-[calc(33.333%-16px)] snap-start bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-md md:p-lg rounded-2xl flex flex-col justify-between hover-scale">
+                  <div class="space-y-sm">
+                    <div class="flex text-amber-400">
+                      <?php for ($i = 1; $i <= 5; $i++) : ?>
+                        <?php if ($i <= $ulasan['rating']) : ?>
+                          <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        <?php else : ?>
+                          <span class="material-symbols-outlined text-[20px] text-on-surface-variant/20">star</span>
+                        <?php endif; ?>
+                      <?php endfor; ?>
+                    </div>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant italic leading-relaxed">
+                      "<?= htmlspecialchars($ulasan['isi_ulasan']) ?>"
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-sm pt-md mt-md border-t border-outline-variant/30">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-primary/30 bg-primary/10 flex items-center justify-center text-primary">
+                      <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">person</span>
+                    </div>
+                    <div>
+                      <h4 class="font-title-sm text-body-sm text-on-surface dark:text-inverse-on-surface font-bold"><?= htmlspecialchars($ulasan['nama_pasien']) ?></h4>
+                      <p class="font-body-xs text-[11px] text-on-surface-variant dark:text-surface-variant">Pasien <?= htmlspecialchars($ulasan['layanan_diambil']) ?></p>
+                    </div>
+                  </div>
+                </div>
+                <?php endforeach; ?>
+              <?php else : ?>
+                <div class="w-full text-center py-xl">
+                  <span class="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-md block">reviews</span>
+                  <p class="font-body-md text-on-surface-variant">Belum ada ulasan. Jadilah yang pertama memberikan ulasan!</p>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- Form Kirim Ulasan -->
+          <div class="mt-xl">
+            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-2xl p-xl">
+              <div class="flex items-center gap-md mb-lg">
+                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                  <span class="material-symbols-outlined">rate_review</span>
+                </div>
+                <div>
+                  <h3 class="font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface">Bagikan Pengalaman Anda</h3>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant">Ulasan Anda membantu pasien lain dalam memilih perawatan yang tepat.</p>
+                </div>
+              </div>
+
+              <form id="review-form" method="POST" action="#testimonials" class="space-y-md">
+                <input type="hidden" name="form_action" value="kirim_ulasan" />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">NAMA ANDA</label>
+                    <input name="nama_pengulas" class="w-full bg-surface-container-lowest dark:bg-inverse-surface/50 border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Masukkan nama Anda" required type="text" />
+                  </div>
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">LAYANAN YANG DIAMBIL</label>
+                    <select name="layanan_review" class="w-full bg-surface-container-lowest dark:bg-inverse-surface/50 border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required>
+                      <option disabled selected value="">Pilih layanan</option>
+                      <option value="Laser Therapy">Laser Therapy</option>
+                      <option value="Facial Treatment">Facial Treatment</option>
+                      <option value="Skincare Racikan">Skincare Racikan</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">RATING</label>
+                  <div class="flex gap-xs items-center" id="star-rating-input">
+                    <?php for ($s = 1; $s <= 5; $s++) : ?>
+                    <button type="button" class="star-btn text-on-surface-variant/30 hover:text-amber-400 transition-colors" data-value="<?= $s ?>">
+                      <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">star</span>
+                    </button>
+                    <?php endfor; ?>
+                    <input type="hidden" name="rating_review" id="rating-value" value="5" />
+                    <span id="rating-text" class="ml-sm font-body-sm text-on-surface-variant dark:text-surface-variant">5 / 5</span>
+                  </div>
+                </div>
+
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">ISI ULASAN</label>
+                  <textarea name="isi_ulasan" class="w-full bg-surface-container-lowest dark:bg-inverse-surface/50 border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Ceritakan pengalaman perawatan Anda di GlowSkin..." rows="3" required></textarea>
+                </div>
+
+                <button type="submit" class="bg-primary text-on-primary px-xl py-sm rounded-lg font-title-sm text-title-sm hover:bg-primary-container transition-all active:scale-95 flex items-center gap-sm">
+                  <span class="material-symbols-outlined text-[20px]">send</span>
+                  Kirim Ulasan
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section class="py-xl bg-surface dark:bg-inverse-surface/10" id="faq">
+        <div class="max-w-4xl mx-auto px-xl">
+          <div class="text-center mb-xl">
+            <span class="px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps inline-block mb-xs">FAQ</span>
+            <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Pertanyaan Populer</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant max-w-2xl mx-auto">
+              Temukan jawaban cepat untuk pertanyaan-pertanyaan yang sering diajukan mengenai layanan kami.
+            </p>
+          </div>
+
+          <div class="space-y-md">
+            <!-- FAQ 1 -->
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+                <span>Berapa lama waktu yang dibutuhkan untuk melihat hasil perawatan?</span>
+                <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
+              </summary>
+              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+                Hasil bervariasi bergantung pada kondisi kulit individu dan jenis perawatan. Namun, untuk perawatan dasar seperti Facial Treatment, kesegaran instan dapat dirasakan langsung setelah sesi selesai. Untuk terapi laser, hasil optimal terlihat dalam 2-4 minggu setelah tindakan.
+              </div>
+            </details>
+
+            <!-- FAQ 2 -->
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+                <span>Apakah krim racikan dokter GlowSkin aman dan bersertifikat BPOM?</span>
+                <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
+              </summary>
+              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+                Ya, semua bahan dasar krim dan produk kami bersertifikat BPOM dan diracik secara personal berdasarkan resep khusus dokter spesialis kulit kami agar sesuai dengan profil kulit unik Anda secara aman dan terkontrol.
+              </div>
+            </details>
+
+            <!-- FAQ 3 -->
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+                <span>Bagaimana cara melakukan pembatalan atau perubahan jadwal reservasi?</span>
+                <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
+              </summary>
+              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+                Anda dapat menghubungi kami langsung melalui WhatsApp konfirmasi yang Anda terima setelah melakukan pendaftaran online, minimal 24 jam sebelum jadwal konsultasi dimulai.
+              </div>
+            </details>
+
+            <!-- FAQ 4 -->
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+                <span>Apakah perawatan medis di GlowSkin terasa sakit?</span>
+                <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
+              </summary>
+              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+                Kami mengutamakan kenyamanan pasien. Untuk perawatan medis tertentu seperti laser atau injeksi, kami menggunakan krim anestesi topikal berkualitas tinggi untuk meminimalisir rasa tidak nyaman selama tindakan berlangsung.
+              </div>
+            </details>
+
+            <!-- FAQ 5 -->
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+                <span>Metode pembayaran apa saja yang diterima di GlowSkin?</span>
+                <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
+              </summary>
+              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+                Kami menerima pembayaran tunai, kartu debit/kredit (Visa, Mastercard, BCA, Mandiri), serta transfer bank dan QRIS. Pembayaran dilakukan di klinik setelah perawatan selesai.
+              </div>
+            </details>
           </div>
         </div>
       </section>
@@ -504,12 +805,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
                 <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">JENIS PERAWATAN</label>
-                  <select id="booking-service" name="id_layanan" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
-                    <option disabled="" selected="" value="">Pilih perawatan</option>
-                    <option value="2">Laser Therapy</option>
-                    <option value="3">Facial Treatment</option>
-                    <option value="1">Konsultasi &amp; Skincare</option>
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">TANGGAL LAHIR</label>
+                  <input name="tanggal_lahir" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" type="date" />
+                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                </div>
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">JENIS KELAMIN</label>
+                  <select name="id_jenis_kelamin" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
+                    <option disabled="" selected="" value="">Pilih jenis kelamin</option>
+                    <option value="1">Laki-laki</option>
+                    <option value="2">Perempuan</option>
+                  </select>
+                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">KATEGORI PERAWATAN</label>
+                  <select id="booking-category" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
+                    <option disabled="" selected="" value="">Pilih kategori utama</option>
+                    <option value="laser">Laser Therapy</option>
+                    <option value="facial">Facial Treatment</option>
+                    <option value="skincare">Skincare Racikan</option>
+                  </select>
+                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                </div>
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">DETAIL PERAWATAN</label>
+                  <select id="booking-service" name="id_layanan" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" disabled="">
+                    <option disabled="" selected="" value="">Pilih kategori dahulu</option>
                   </select>
                   <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
                 </div>
@@ -519,8 +844,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <!-- value menggunakan ID numerik sesuai tabel dokter di database -->
                   <select name="id_dokter" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
                     <option disabled="" selected="" value="">Pilih dokter</option>
-                    <option value="1">dr. Sarah, Sp.KK</option>
-                    <option value="2">dr. Adrian</option>
+                    <?php foreach ($daftar_dokter as $dokter) : ?>
+                      <option value="<?= $dokter['id_dokter'] ?>"><?= htmlspecialchars($dokter['nama_lengkap']) ?></option>
+                    <?php endforeach; ?>
                   </select>
                   <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
                 </div>
@@ -541,6 +867,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
       </section>
+      <!-- Informasi Klinik Section -->
+      <section class="py-xl bg-surface dark:bg-inverse-surface/10" id="info-klinik">
+        <div class="max-w-7xl mx-auto px-xl">
+          <div class="text-center mb-xl">
+            <span class="px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps inline-block mb-xs">INFO KLINIK</span>
+            <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Jam Operasional &amp; Lokasi</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant max-w-2xl mx-auto">
+              Kunjungi kami atau hubungi untuk informasi lebih lanjut mengenai perawatan kulit Anda.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+            <!-- Jam Operasional -->
+            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl text-center hover-scale">
+              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg mx-auto">
+                <span class="material-symbols-outlined text-3xl">schedule</span>
+              </div>
+              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Jam Operasional</h3>
+              <div class="space-y-xs text-on-surface-variant dark:text-surface-variant font-body-sm">
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">Senin &ndash; Jumat:</span> 09.00 &ndash; 20.00 WIB</p>
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">Sabtu:</span> 09.00 &ndash; 17.00 WIB</p>
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">Minggu &amp; Hari Libur:</span> Tutup</p>
+              </div>
+            </div>
+
+            <!-- Alamat -->
+            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl text-center hover-scale">
+              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg mx-auto">
+                <span class="material-symbols-outlined text-3xl">location_on</span>
+              </div>
+              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Alamat Klinik</h3>
+              <div class="space-y-xs text-on-surface-variant dark:text-surface-variant font-body-sm">
+                <p>Jl. Kecantikan No. 88, Lantai 2</p>
+                <p>Kelurahan Sehat Berseri</p>
+                <p>Kota Bandung, Jawa Barat 40123</p>
+              </div>
+            </div>
+
+            <!-- Kontak -->
+            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl text-center hover-scale">
+              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg mx-auto">
+                <span class="material-symbols-outlined text-3xl">call</span>
+              </div>
+              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Hubungi Kami</h3>
+              <div class="space-y-xs text-on-surface-variant dark:text-surface-variant font-body-sm">
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">Telepon:</span> (022) 8888-1234</p>
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">WhatsApp:</span> 0812-3456-7890</p>
+                <p><span class="font-semibold text-on-surface dark:text-inverse-on-surface">Email:</span> info@glowskin.id</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->
@@ -550,13 +929,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">spa</span>
           <span class="font-title-sm text-title-sm font-bold text-primary tracking-tight">GlowSkin Aesthetic Clinic</span>
         </div>
-        <div class="flex flex-wrap justify-center gap-xl mb-xl text-on-surface-variant dark:text-surface-variant font-body-sm">
+        <div class="flex flex-wrap justify-center gap-xl mb-md text-on-surface-variant dark:text-surface-variant font-body-sm font-semibold">
+          <a class="hover:text-primary transition-colors" href="#services">Layanan</a>
+          <a class="hover:text-primary transition-colors" href="#doctors">Dokter</a>
+          <a class="hover:text-primary transition-colors" href="#testimonials">Ulasan</a>
+          <a class="hover:text-primary transition-colors" href="#faq">FAQ</a>
+          <a class="hover:text-primary transition-colors" href="#reservation">Reservasi</a>
+        </div>
+        <div class="flex flex-wrap justify-center gap-xl mb-md text-on-surface-variant/70 dark:text-surface-variant/70 font-body-sm text-[13px]">
           <a class="hover:text-primary transition-colors" href="#">Syarat &amp; Ketentuan</a>
           <a class="hover:text-primary transition-colors" href="#">Kebijakan Privasi</a>
           <a class="hover:text-primary transition-colors" href="#">Pusat Bantuan</a>
         </div>
+        <div class="flex flex-wrap justify-center gap-lg mb-md text-on-surface-variant dark:text-surface-variant font-body-sm">
+          <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">call</span> (022) 8888-1234</span>
+          <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">chat</span> 0812-3456-7890</span>
+          <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">mail</span> info@glowskin.id</span>
+        </div>
         <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant">
-          © 2024 GlowSkin Aesthetic Clinic. Semua Hak Dilindungi.
+          &copy; 2025 GlowSkin Aesthetic Clinic. Semua Hak Dilindungi.
         </p>
       </div>
     </footer>
@@ -694,7 +1085,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       };
 
-      document.addEventListener('DOMContentLoaded', () => {
+      (function() {
+        // Data pelayanan berdasarkan kategori (dihasilkan secara dinamis dari PHP)
+        const servicesByCategory = <?= json_encode($js_services) ?>;
+        
+        // Setup dependent dropdown
+        const categorySelect = document.getElementById('booking-category');
+        const serviceSelect = document.getElementById('booking-service');
+
+        if (categorySelect && serviceSelect) {
+          categorySelect.addEventListener('change', function() {
+            const category = this.value;
+            // Reset detail perawatan
+            serviceSelect.innerHTML = '<option disabled selected value="">Pilih tindakan spesifik</option>';
+            
+            if (category && servicesByCategory[category] && servicesByCategory[category].length > 0) {
+              serviceSelect.disabled = false;
+              servicesByCategory[category].forEach(service => {
+                const opt = document.createElement('option');
+                opt.value = service.id;
+                opt.textContent = service.name;
+                serviceSelect.appendChild(opt);
+              });
+            } else {
+              serviceSelect.disabled = true;
+            }
+          });
+        }
+
         // Create and inject modal elements
         const serviceModalContainer = document.createElement('div');
         serviceModalContainer.innerHTML = `
@@ -768,12 +1186,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const modalPrice = document.getElementById('service-modal-price');
         const modalBenefits = document.getElementById('service-modal-benefits');
         let currentActiveService = null;
+        let currentActiveCategory = null;
 
         function openServiceModal(serviceKey) {
           const data = serviceDetailsData[serviceKey];
           if (!data) return;
 
           currentActiveService = data.selectValue;
+          currentActiveCategory = serviceKey;
 
           // Populate details
           modalIcon.innerHTML = `<span class="material-symbols-outlined text-4xl">${data.icon}</span>`;
@@ -829,10 +1249,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             reservationSection.scrollIntoView({ behavior: 'smooth' });
           }
 
-          // Auto select treatment dropdown
-          const selectElement = document.getElementById('booking-service');
-          if (selectElement && currentActiveService) {
-            selectElement.value = currentActiveService;
+          // Auto select treatment dropdown (Category + Detail)
+          const categorySelect = document.getElementById('booking-category');
+          const serviceSelect = document.getElementById('booking-service');
+          if (categorySelect && serviceSelect && currentActiveCategory && currentActiveService) {
+            categorySelect.value = currentActiveCategory;
+            // Trigger change event to populate serviceSelect
+            categorySelect.dispatchEvent(new Event('change'));
+            serviceSelect.value = currentActiveService;
           }
 
           // Focus on name input
@@ -843,7 +1267,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }, 600); // Wait for smooth scroll
           }
         });
-      });
+      })();
+    </script>
+    <script>
+      // Interactive Star Rating for Review Form
+      (function() {
+        const starContainer = document.getElementById('star-rating-input');
+        const ratingInput = document.getElementById('rating-value');
+        const ratingText = document.getElementById('rating-text');
+        if (!starContainer || !ratingInput) return;
+
+        const starBtns = starContainer.querySelectorAll('.star-btn');
+        let currentRating = 5;
+
+        function updateStars(value) {
+          starBtns.forEach(btn => {
+            const val = parseInt(btn.getAttribute('data-value'));
+            if (val <= value) {
+              btn.classList.remove('text-on-surface-variant/30');
+              btn.classList.add('text-amber-400');
+            } else {
+              btn.classList.add('text-on-surface-variant/30');
+              btn.classList.remove('text-amber-400');
+            }
+          });
+        }
+
+        // Initialize all stars as selected (default 5)
+        updateStars(5);
+
+        starBtns.forEach(btn => {
+          btn.addEventListener('mouseenter', () => {
+            updateStars(parseInt(btn.getAttribute('data-value')));
+          });
+
+          btn.addEventListener('click', () => {
+            currentRating = parseInt(btn.getAttribute('data-value'));
+            ratingInput.value = currentRating;
+            if (ratingText) ratingText.textContent = currentRating + ' / 5';
+            updateStars(currentRating);
+          });
+        });
+
+        starContainer.addEventListener('mouseleave', () => {
+          updateStars(currentRating);
+        });
+      })();
+    </script>
+    <script>
+      // Testimonials Carousel Control
+      (function() {
+        const slider = document.getElementById('testi-slider');
+        const prevBtn = document.getElementById('prev-testi');
+        const nextBtn = document.getElementById('next-testi');
+        if (!slider || !prevBtn || !nextBtn) return;
+
+        // Dynamic scroll calculation based on card width
+        function getScrollStep() {
+          const firstCard = slider.firstElementChild;
+          if (!firstCard) return 300;
+          
+          // Width of card plus gap
+          const cardWidth = firstCard.getBoundingClientRect().width;
+          const style = window.getComputedStyle(slider);
+          const gap = parseFloat(style.columnGap || style.gap) || 24;
+          return cardWidth + gap;
+        }
+
+        prevBtn.addEventListener('click', () => {
+          slider.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
+        });
+
+        nextBtn.addEventListener('click', () => {
+          slider.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
+        });
+      })();
+    </script>
+    <script>
+      // FAQ Accordion Fallback
+      (function() {
+        const details = document.querySelectorAll('details[name="faq"]');
+        details.forEach((targetDetail) => {
+          targetDetail.addEventListener('toggle', () => {
+            if (targetDetail.open) {
+              details.forEach((detail) => {
+                if (detail !== targetDetail && detail.open) {
+                  detail.open = false; // Close other details
+                }
+              });
+            }
+          });
+        });
+      })();
     </script>
   </body>
 </html>

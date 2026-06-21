@@ -20,6 +20,52 @@
 // --- SERTAKAN FILE KONEKSI DATABASE ---
 require_once __DIR__ . '/../koneksi.php';
 
+// --- INITIALIZE SESSION & DYNAMIC DOCTOR SWITCHER ---
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (isset($_GET['switch_dokter'])) {
+    $sw = intval($_GET['switch_dokter']);
+    if ($sw === 1 || $sw === 2) {
+        $_SESSION['id_dokter'] = $sw;
+        // Redirect to self without switch_dokter param
+        $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
+        $params = $_GET;
+        unset($params['switch_dokter']);
+        if (!empty($params)) {
+            $clean_url .= '?' . http_build_query($params);
+        }
+        header("Location: " . $clean_url);
+        exit();
+    }
+}
+$id_dokter_login = $_SESSION['id_dokter'] ?? 1; // Default to 1 (dr. Sarah)
+
+// Fetch current doctor details from database
+try {
+    $stmt_doc = $pdo->prepare("
+        SELECT d.nama_lengkap, s.nama AS spesialisasi
+        FROM dokter d
+        JOIN ref_spesialisasi s ON d.id_spesialisasi = s.id
+        WHERE d.id_dokter = :id
+    ");
+    $stmt_doc->execute([':id' => $id_dokter_login]);
+    $doc_info = $stmt_doc->fetch(PDO::FETCH_ASSOC);
+    $nama_dokter = $doc_info['nama_lengkap'] ?? 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = $doc_info['spesialisasi'] ?? 'Spesialis Kulit & Kelamin';
+} catch (PDOException $e) {
+    $nama_dokter = 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = 'Spesialis Kulit & Kelamin';
+}
+
+// Map profile photo
+if ($id_dokter_login == 1) {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI';
+} else {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc';
+}
+
 // --- VARIABEL UNTUK PESAN FEEDBACK ---
 $pesan_sukses = '';
 $pesan_error  = '';
@@ -99,6 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Anamnesis dan Diagnosa wajib diisi!");
         }
 
+        // --- MULAI TRANSAKSI DATABASE ---
+        $pdo->beginTransaction();
+
         /**
          * --- LANGKAH 2: INSERT DATA REKAM MEDIS KE DATABASE ---
          * Menggunakan Prepared Statement untuk keamanan (anti SQL Injection).
@@ -127,28 +176,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // --- LANGKAH 2B: PROSES INPUT RESEP OBAT ---
         if ($id_obat > 0 && $jumlah_obat > 0) {
             // Validasi: Cek kecukupan stok obat terlebih dahulu
-            $stmt_cek = $pdo->prepare("SELECT stok FROM obat WHERE id_obat = :id");
+            $stmt_cek = $pdo->prepare("SELECT stok, harga_jual FROM obat WHERE id_obat = :id");
             $stmt_cek->execute([':id' => $id_obat]);
-            $stok_sekarang = $stmt_cek->fetchColumn();
+            $obat_info = $stmt_cek->fetch();
+            $stok_sekarang = $obat_info['stok'] ?? 0;
+            $harga_satuan = floatval($obat_info['harga_jual'] ?? 0);
 
             if ($stok_sekarang < $jumlah_obat) {
                 throw new Exception("Stok obat tidak mencukupi! Stok saat ini: $stok_sekarang");
             }
 
-            // Simpan resep obat ke tabel resep_obat
-            // Catatan: Setelah ini ter-insert, trigger 'trg_kurangi_stok_obat' di MySQL
-            // (yang Anda buat di Workbench) akan otomatis mengurangi stok obat di tabel obat.
+            // Hitung subtotal secara dinamis
+            $subtotal = $harga_satuan * $jumlah_obat;
+
+            // Simpan resep obat ke tabel resep_obat dengan harga_satuan & subtotal (NOT NULL)
+            // Catatan: Setelah ini ter-insert, trigger 'trg_resep_after_insert' di MySQL
+            // akan otomatis mengurangi stok obat di tabel obat.
             $stmt_resep = $pdo->prepare("
-                INSERT INTO resep_obat (id_kunjungan, id_obat, jumlah, aturan_pakai)
-                VALUES (:id_kunjungan, :id_obat, :jumlah, :aturan_pakai)
+                INSERT INTO resep_obat (id_kunjungan, id_obat, jumlah, aturan_pakai, harga_satuan, subtotal)
+                VALUES (:id_kunjungan, :id_obat, :jumlah, :aturan_pakai, :harga_satuan, :subtotal)
             ");
             $stmt_resep->execute([
                 ':id_kunjungan' => $post_id_kunjungan,
                 ':id_obat'      => $id_obat,
                 ':jumlah'       => $jumlah_obat,
-                ':aturan_pakai' => $aturan_pakai
+                ':aturan_pakai' => $aturan_pakai,
+                ':harga_satuan' => $harga_satuan,
+                ':subtotal'     => $subtotal
             ]);
         }
+
+        // --- COMMIT TRANSAKSI ---
+        $pdo->commit();
 
         // --- LANGKAH 3: Set pesan sukses ---
         $pesan_sukses = "Rekam Medis berhasil disimpan!\\nResep obat telah tercatat dan stok obat otomatis terpotong via database Trigger.";
@@ -157,8 +216,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_kunjungan = $post_id_kunjungan;
 
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $pesan_error = "Kesalahan database: " . $e->getMessage();
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $pesan_error = $e->getMessage();
     }
 }
@@ -348,13 +413,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="h-8 w-px bg-outline-variant"></div>
 
-          <div class="flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <p class="font-title-sm text-title-sm leading-none text-primary">dr. Sarah Wijaya, Sp.KK</p>
-              <p class="font-label-caps text-[10px] text-on-surface-variant">DOKTER SPESIALIS</p>
-            </div>
-            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
-              <img alt="Doctor Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCizprgqdDImNl_3N10D2QU4V56cW0d9IEcu6PwfSVJ8d1EfXJIpqdOGo4heFc2roP5DOUh1SaGno_rfp1fhhOZCJgTO4GB060lETXOc1LhZ6SQglNuVrqIcVBUv8vtYPbhimTcFeXJlHuvbgaVVX6s6fvVtxN94ui8dRMkRfc8a1GNoMqQc56aczHWi0Sj3QcmQiUQqXnCAyehUUmStxNe_LST_wLpqSfcZ5lmglVgNYqEEVnmkkqFtW0sZ-Wv_2BvVXAo5ZNOFaE"/>
+          <!-- Doctor Switcher Dropdown -->
+          <div class="relative">
+            <button id="profile-menu-button" class="flex items-center gap-3 hover:bg-surface-container-low p-1.5 rounded-lg transition-all outline-none">
+              <div class="text-right hidden sm:block">
+                <p class="font-title-sm text-title-sm leading-none text-primary"><?= htmlspecialchars($nama_dokter) ?></p>
+                <p class="font-label-caps text-[10px] text-on-surface-variant"><?= htmlspecialchars($spesialisasi_dokter) ?></p>
+              </div>
+              <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+                <img alt="Doctor Profile" class="w-full h-full object-cover" src="<?= $foto_dokter ?>"/>
+              </div>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="profile-dropdown" class="absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg hidden z-50">
+              <div class="p-2 border-b border-outline-variant">
+                <p class="text-[10px] font-label-caps text-on-surface-variant uppercase px-3 py-1">Ganti Dokter</p>
+              </div>
+              <div class="p-1 space-y-1">
+                <a href="?switch_dokter=1<?= isset($_GET['id_kunjungan']) ? '&id_kunjungan=' . urlencode($_GET['id_kunjungan']) : '' ?>" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 1 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Sarah Sp.KK</p>
+                    <p class="text-[9px] text-on-surface-variant">Dermatologist</p>
+                  </div>
+                </a>
+                <a href="?switch_dokter=2<?= isset($_GET['id_kunjungan']) ? '&id_kunjungan=' . urlencode($_GET['id_kunjungan']) : '' ?>" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 2 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Adrian</p>
+                    <p class="text-[9px] text-on-surface-variant">Aesthetician</p>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -483,8 +579,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       <label class="block font-label-caps text-[10px] text-on-surface-variant mb-xs">DIAGNOSA UTAMA</label>
                       <!-- name="diagnosa" → sinkron dengan $_POST['diagnosa'] -->
                       <div class="relative">
-                        <input name="diagnosa" class="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-10 py-sm text-body-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan diagnosa utama (contoh: L57.0 Actinic Keratosis)" type="text" required />
+                        <input name="diagnosa" list="diagnosa-list" class="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-10 py-sm text-body-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Pilih atau cari diagnosa utama..." type="text" required />
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                        <datalist id="diagnosa-list">
+                          <option value="L70.0 Acne Vulgaris (Jerawat / Komedo / Papul)">
+                          <option value="L81.1 Chloasma / Melasma (Flek Hitam Pigmentasi)">
+                          <option value="L81.4 Post-Inflammatory Hyperpigmentation (Bekas Jerawat Kehitaman)">
+                          <option value="L90.5 Acne Scars and Fibrosis (Bopeng / Bekas Luka Jerawat)">
+                          <option value="L57.0 Actinic Keratosis (Bercak Kasar Akibat Sinar Matahari)">
+                          <option value="L57.8 Photoaging / Skin Aging (Kerutan & Penuaan Dini UV)">
+                          <option value="L71.9 Rosacea (Kemerahan & Pelebaran Pembuluh Darah Wajah)">
+                          <option value="L30.9 Dermatitis / Eksim (Radang & Iritasi Kulit)">
+                        </datalist>
                       </div>
                     </div>
                   </div>
@@ -589,6 +695,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
         }
       });
+
+      // Profile Dropdown Toggle
+      const profileButton = document.getElementById('profile-menu-button');
+      const profileDropdown = document.getElementById('profile-dropdown');
+      if (profileButton && profileDropdown) {
+        profileButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profileDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+          profileDropdown.classList.add('hidden');
+        });
+      }
     </script>
   </body>
 </html>

@@ -1,3 +1,108 @@
+<?php
+require_once __DIR__ . '/../koneksi.php';
+
+function h($value) {
+    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function formatTanggalIndonesia($date) {
+    if (!$date) {
+        return '-';
+    }
+
+    $bulan = [
+        1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    $timestamp = strtotime($date);
+    return date('d', $timestamp) . ' ' . $bulan[(int)date('n', $timestamp)] . ' ' . date('Y', $timestamp);
+}
+
+function getInitials($name) {
+    $words = preg_split('/\s+/', trim((string)$name));
+    $initials = '';
+    foreach ($words as $word) {
+        if ($word !== '') {
+            $initials .= strtoupper(substr($word, 0, 1));
+        }
+        if (strlen($initials) >= 2) {
+            break;
+        }
+    }
+    return $initials ?: 'GS';
+}
+
+$today_visits = 0;
+$service_categories = [];
+$medical_records = [];
+
+try {
+    $today_visits = (int)$pdo->query("SELECT COUNT(*) FROM kunjungan WHERE tanggal_kunjungan = CURDATE()")->fetchColumn();
+
+    $service_categories = $pdo->query("
+        SELECT id, nama
+        FROM ref_jenis_layanan
+        ORDER BY id
+    ")->fetchAll();
+
+    $stmt_records = $pdo->query("
+        SELECT
+            k.id_kunjungan,
+            k.kode_kunjungan,
+            k.tanggal_kunjungan,
+            k.waktu_daftar,
+            k.keluhan_utama,
+            p.kode_pasien,
+            p.nama_lengkap AS nama_pasien,
+            p.tanggal_lahir,
+            p.alergi,
+            p.kategori AS kategori_pasien,
+            jk.nama AS jenis_kelamin,
+            d.nama_lengkap AS nama_dokter,
+            sk.nama AS status_kunjungan,
+            rm.anamnesis,
+            rm.diagnosa,
+            rm.tindakan,
+            rm.tekanan_darah,
+            GROUP_CONCAT(DISTINCT l.nama_layanan ORDER BY l.nama_layanan SEPARATOR ', ') AS layanan,
+            GROUP_CONCAT(DISTINCT jl.id ORDER BY jl.id SEPARATOR ',') AS kategori_layanan_ids
+        FROM kunjungan k
+        JOIN pasien p ON k.id_pasien = p.id_pasien
+        JOIN ref_jenis_kelamin jk ON p.id_jenis_kelamin = jk.id
+        JOIN dokter d ON k.id_dokter = d.id_dokter
+        JOIN ref_status_kunjungan sk ON k.id_status = sk.id
+        LEFT JOIN rekam_medis rm ON k.id_kunjungan = rm.id_kunjungan
+        LEFT JOIN detail_layanan dl ON k.id_kunjungan = dl.id_kunjungan
+        LEFT JOIN layanan l ON dl.id_layanan = l.id_layanan
+        LEFT JOIN ref_jenis_layanan jl ON l.id_jenis_layanan = jl.id
+        GROUP BY
+            k.id_kunjungan, k.kode_kunjungan, k.tanggal_kunjungan, k.waktu_daftar,
+            k.keluhan_utama, p.kode_pasien, p.nama_lengkap, p.tanggal_lahir,
+            p.alergi, p.kategori, jk.nama, d.nama_lengkap, sk.nama,
+            rm.anamnesis, rm.diagnosa, rm.tindakan, rm.tekanan_darah
+        ORDER BY k.tanggal_kunjungan DESC, k.waktu_daftar DESC, k.id_kunjungan DESC
+    ");
+    $medical_records = $stmt_records->fetchAll();
+} catch (PDOException $e) {
+    $today_visits = 0;
+    $service_categories = [];
+    $medical_records = [];
+}
+
+$selected_record = $medical_records[0] ?? null;
+$selected_summary = $selected_record
+    ? ($selected_record['tindakan'] ?: ($selected_record['diagnosa'] ?: ($selected_record['anamnesis'] ?: $selected_record['keluhan_utama'])))
+    : 'Pilih salah satu kunjungan untuk melihat ringkasan medis.';
+$selected_age = ($selected_record && $selected_record['tanggal_lahir'])
+    ? (int)date_diff(date_create($selected_record['tanggal_lahir']), date_create('today'))->y
+    : '-';
+$selected_allergy = ($selected_record && trim((string)($selected_record['alergi'] ?? '')) !== '')
+    ? $selected_record['alergi']
+    : 'Tidak Ada';
+$selected_avatar = $selected_record
+    ? 'https://ui-avatars.com/api/?name=' . urlencode($selected_record['nama_pasien']) . '&background=E0F2F1&color=00796B&bold=true&size=128'
+    : 'https://ui-avatars.com/api/?name=GlowSkin&background=E0F2F1&color=00796B&bold=true&size=128';
+?>
 <!DOCTYPE html>
 <html class="light" lang="id">
   <head>
@@ -117,15 +222,19 @@
           <span class="font-label-caps text-label-caps">Ringkasan Dashboard</span>
         </a>
         <!-- Active Tab -->
-        <a class="group relative flex items-center px-lg py-3 text-primary dark:text-primary-fixed-dim font-bold border-l-4 border-primary dark:border-primary-fixed-dim bg-primary/5 transition-all duration-200" href="rekam-medis.html">
+        <a class="group relative flex items-center px-lg py-3 text-primary dark:text-primary-fixed-dim font-bold border-l-4 border-primary dark:border-primary-fixed-dim bg-primary/5 transition-all duration-200" href="rekam-medis.php">
           <span class="material-symbols-outlined mr-3">medical_services</span>
           <span class="font-label-caps text-label-caps">Data Pasien &amp; Rekam Medis</span>
         </a>
-        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="inventori.html">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="inventori.php">
           <span class="material-symbols-outlined mr-3">inventory_2</span>
           <span class="font-label-caps text-label-caps">Inventori Produk Skincare</span>
         </a>
-        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="log-keamanan.html">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="transaksi.php">
+          <span class="material-symbols-outlined mr-3">payments</span>
+          <span class="font-label-caps text-label-caps">Transaksi &amp; Pembayaran</span>
+        </a>
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="log-keamanan.php">
           <span class="material-symbols-outlined mr-3">security</span>
           <span class="font-label-caps text-label-caps">Log Keamanan Sistem</span>
         </a>
@@ -174,18 +283,18 @@
 
           <div class="flex items-center gap-2 text-on-surface-variant dark:text-slate-300 bg-surface-container-low/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-outline-variant/30 dark:border-slate-800">
             <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-            <span class="text-body-sm font-medium" id="current-date-display">13 Juni 2026</span>
+            <input type="date" id="calendar-select" class="bg-transparent border-none p-0 text-body-sm font-medium focus:ring-0 outline-none text-on-surface cursor-pointer dark:text-white" onchange="window.location.href = '?tanggal=' + this.value;">
           </div>
 
           <div class="h-8 w-px bg-outline-variant dark:bg-slate-800"></div>
 
           <div class="flex items-center gap-3">
             <div class="text-right hidden sm:block">
-              <p class="font-title-sm text-title-sm leading-none text-primary">Dr. Sarah Wijaya</p>
+              <p class="font-title-sm text-title-sm leading-none text-primary">Admin Nanda</p>
               <p class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400">SUPER ADMIN</p>
             </div>
-            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
-              <img alt="Administrator Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M"/>
+            <div class="w-10 h-10 rounded-full border-2 border-primary-container bg-primary/10 flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-[24px]">person</span>
             </div>
           </div>
         </div>
@@ -200,12 +309,8 @@
               <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface">Data Pasien &amp; Rekam Medis</h2>
               <p class="font-body-md text-body-md text-on-surface-variant">Manajemen data riwayat klinis pasien secara real-time.</p>
             </div>
-            <button class="flex items-center gap-xs border border-primary text-primary hover:bg-primary/10 dark:border-primary-fixed-dim dark:text-primary-fixed-dim dark:hover:bg-primary-fixed-dim/10 rounded-lg px-md py-1.5 font-medium text-xs transition-all shadow-sm">
-              <span class="material-symbols-outlined text-[16px]">print</span>
-              Cetak Laporan Bulanan
-            </button>
           </div>
-
+ 
           <!-- Filters & Stats Bento -->
           <div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
             <div class="col-span-1 md:col-span-3 bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant dark:border-slate-800 p-lg rounded-xl flex flex-wrap gap-md items-center shadow-sm">
@@ -222,17 +327,16 @@
                 <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400">Kategori Layanan</label>
                 <select class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-md py-sm text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary outline-none transition-all" id="filter-service">
                   <option value="all">Semua Layanan</option>
-                  <option value="facial">Facial Rejuvenation</option>
-                  <option value="laser">Laser Acne Removal</option>
-                  <option value="peeling">Chemical Peeling</option>
-                  <option value="consultation">Medical Consultation</option>
+                  <?php foreach ($service_categories as $category) : ?>
+                    <option value="<?= h($category['id']) ?>"><?= h($category['nama']) ?></option>
+                  <?php endforeach; ?>
                 </select>
               </div>
               <div class="flex flex-col gap-xs min-w-[200px]">
                 <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400">Status</label>
                 <div class="flex gap-sm">
                   <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-primary/10 text-primary dark:text-primary-fixed-dim border border-primary/20 transition-all" data-status="all">Semua</button>
-                  <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10 dark:hover:bg-primary-fixed-dim/20 hover:text-primary dark:hover:text-primary-fixed-dim transition-all border border-transparent" data-status="aktif">Aktif</button>
+                  <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10 dark:hover:bg-primary-fixed-dim/20 hover:text-primary dark:hover:text-primary-fixed-dim transition-all border border-transparent" data-status="menunggu">Menunggu</button>
                   <button class="status-btn px-md py-sm rounded-full font-label-caps text-label-caps bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10 dark:hover:bg-primary-fixed-dim/20 hover:text-primary dark:hover:text-primary-fixed-dim transition-all border border-transparent" data-status="selesai">Selesai</button>
                 </div>
               </div>
@@ -240,7 +344,7 @@
             <div class="bg-primary text-on-primary p-lg rounded-xl flex flex-col justify-between shadow-sm">
               <span class="font-label-caps text-label-caps opacity-80 uppercase">Total Kunjungan Hari Ini</span>
               <div class="flex items-end justify-between">
-                <span class="text-[32px] font-bold leading-none">142</span>
+                <span class="text-[32px] font-bold leading-none"><?= number_format($today_visits, 0, ',', '.') ?></span>
                 <span class="material-symbols-outlined text-[32px]">trending_up</span>
               </div>
             </div>
@@ -262,116 +366,70 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-outline-variant/30 dark:divide-slate-800/50" id="record-table-body">
-                    <!-- Patient 1 -->
-                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row bg-primary/5 dark:bg-primary-fixed-dim/5 border-l-4 border-primary dark:border-primary-fixed-dim" data-service="facial" data-status="aktif" data-name="Siti Nurhaliza" data-id="GS-2023-0891" data-age="28" data-gender="Perempuan" data-blood="115/80 mmHg" data-allergy="Tidak Ada" data-date="12 Okt 2023 09:15 WIB" data-summary="Pasien mengeluhkan hiperpigmentasi ringan di area pipi. Dilakukan treatment Facial Rejuvenation tahap 2 dengan serum pencerah dosis rendah." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuBvRxKGLYp63qoH-1uiQcczc2VM0ucbHrcJBhD9BjtL6hUYIofyqaLCQfYM3kZVaRFOd6nABA2T0IfWx2r6j3QuxSR_P_1_nQumo_qN73Xuo9FND3o13HBAH0cC37ZzERjuBdFiknnS3-ZIsTNs881Mozh6mmp25tY0NiSoUv9NMndrXeWtNPKTlWJsqKYlbNXC7AlqjLzHpe4b7b71gV58Q5D45tQSi69cdLAQFSY2Q6zWcQO3BAld2t8bpgUe3Q7fbaWkxrmK8Aw">
+                    <?php if (!empty($medical_records)) : ?>
+                      <?php foreach ($medical_records as $index => $record) :
+                        $is_active_row = $index === 0;
+                        $status_filter = in_array($record['status_kunjungan'], ['Selesai', 'Batal'], true) ? 'selesai' : 'menunggu';
+                        $category_ids = $record['kategori_layanan_ids'] ? ',' . $record['kategori_layanan_ids'] . ',' : '';
+                        $summary = $record['tindakan'] ?: ($record['diagnosa'] ?: ($record['anamnesis'] ?: $record['keluhan_utama']));
+                        $age = $record['tanggal_lahir'] ? (int)date_diff(date_create($record['tanggal_lahir']), date_create('today'))->y : '-';
+                        $blood_pressure = $record['tekanan_darah'] ?: '-';
+                        $allergy = trim((string)($record['alergi'] ?? '')) !== '' ? $record['alergi'] : 'Tidak Ada';
+                        $visit_date = formatTanggalIndonesia($record['tanggal_kunjungan']);
+                        $visit_time = $record['waktu_daftar'] ? date('H:i', strtotime($record['waktu_daftar'])) . ' WIB' : '-';
+                        $initials = getInitials($record['nama_pasien']);
+                        $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($record['nama_pasien']) . '&background=E0F2F1&color=00796B&bold=true&size=128';
+                      ?>
+                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row <?= $is_active_row ? 'bg-primary/5 dark:bg-primary-fixed-dim/5 border-l-4 border-primary dark:border-primary-fixed-dim' : '' ?>"
+                        data-service="<?= h($category_ids) ?>"
+                        data-status="<?= h($status_filter) ?>"
+                        data-date-iso="<?= h($record['tanggal_kunjungan']) ?>"
+                        data-name="<?= h($record['nama_pasien']) ?>"
+                        data-id="<?= h($record['kode_pasien']) ?>"
+                        data-age="<?= h($age) ?>"
+                        data-gender="<?= h($record['jenis_kelamin']) ?>"
+                        data-blood="<?= h($blood_pressure) ?>"
+                        data-allergy="<?= h($allergy) ?>"
+                        data-summary="<?= h($summary) ?>"
+                        data-service-label="<?= h($record['layanan'] ?: 'Belum ada layanan') ?>"
+                        data-date-label="<?= h($visit_date) ?>"
+                        data-avatar="<?= h($avatar) ?>">
                       <td class="px-lg py-lg">
                         <div class="flex flex-col">
-                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
-                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">09:15 WIB</span>
+                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100"><?= h($visit_date) ?></span>
+                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400"><?= h($visit_time) ?></span>
                         </div>
                       </td>
                       <td class="px-lg py-lg">
                         <div class="flex items-center gap-md">
-                          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold text-[12px] flex-shrink-0">SN</div>
+                          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold text-[12px] flex-shrink-0"><?= h($initials) ?></div>
                           <div class="flex flex-col">
-                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Siti Nurhaliza</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0891</span>
+                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100"><?= h($record['nama_pasien']) ?></span>
+                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: <?= h($record['kode_pasien']) ?></span>
                           </div>
                         </div>
                       </td>
                       <td class="px-lg py-lg">
-                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Facial Rejuvenation</span>
+                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded"><?= h($record['layanan'] ?: 'Belum ada layanan') ?></span>
                       </td>
-                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Amanda S.</td>
+                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300"><?= h($record['nama_dokter']) ?></td>
                       <td class="px-lg py-lg text-right">
-                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
+                        <button class="btn-detail-row text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
                       </td>
                     </tr>
-
-                    <!-- Patient 2 -->
-                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="laser" data-status="selesai" data-name="Budi Pratama" data-id="GS-2023-0902" data-age="32" data-gender="Laki-laki" data-blood="120/80 mmHg" data-allergy="Penisilin" data-date="12 Okt 2023 10:30 WIB" data-summary="Dilakukan tindakan Laser Acne Removal di area dahi dan pipi kiri. Pasien disarankan menggunakan sunscreen secara rutin." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuDTuebV9IcJrHnqW2CPVLedT7srbVq0D0Eo0IGtF11N7bmbOv3E04brMFsKjK5A546qprEBLtFM7jN812ebpqmi1Qv8g--FwDBvJoBnFTIxD8N-X8bAThuMg3p4FC-WWP5D0y4km5YqUermThvox-yelZ97HXTo9IfEmrftg1fnUNA5pZ4bqjZtZVgDtwVD4my_Rm1sNvJ_KDGJM-pzOJWWJRs8qAMfimiIKK4J-u5zD_YwjObe2zPehZsUrbRtk3koU-3CcL8Ckvk">
-                      <td class="px-lg py-lg">
-                        <div class="flex flex-col">
-                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
-                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">10:30 WIB</span>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <div class="flex items-center gap-md">
-                          <div class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-[12px] flex-shrink-0">BP</div>
-                          <div class="flex flex-col">
-                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Budi Pratama</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0902</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Laser Acne Removal</span>
-                      </td>
-                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Kevin J.</td>
-                      <td class="px-lg py-lg text-right">
-                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
-                      </td>
+                      <?php endforeach; ?>
+                    <?php else : ?>
+                    <tr>
+                      <td colspan="5" class="px-lg py-xl text-center text-on-surface-variant dark:text-slate-400 italic">Belum ada data kunjungan atau rekam medis di database.</td>
                     </tr>
-
-                    <!-- Patient 3 -->
-                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="peeling" data-status="selesai" data-name="Dewi Wijaya" data-id="GS-2023-0782" data-age="25" data-gender="Perempuan" data-blood="110/75 mmHg" data-allergy="Tidak Ada" data-date="12 Okt 2023 11:45 WIB" data-summary="Tindakan Chemical Peeling tingkat ringan menggunakan Glycolic Acid 10%. Kulit pasien tampak sedikit kemerahan, diberikan cream pasca-peeling." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuBS5BwY3H8kVhBv6vMb2O-IRhU4xcMOcMf0RsVaCPZQTSh0LyPTYHn-dGYzioJhrGFIqpbFbcyW_lEgFwJKKXUKdnscb-zL-1SkzFZsD6gdw12F2zvRBcKTPSHYKwGpGdXsY9C3UZp1ikqTV-boR2rI0cw356u1f_Zj4JpzdUVPIVVWAwqeZzexivqrSSwJtUYgUY0QHed28xWacjVzmCFaUq4IPr16OMUr5xwg8aPwa1Wmnpe_46NvfOTmmSCE4u-DLkksSCJXxfs">
-                      <td class="px-lg py-lg">
-                        <div class="flex flex-col">
-                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">12 Okt 2023</span>
-                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">11:45 WIB</span>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <div class="flex items-center gap-md">
-                          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold text-[12px] flex-shrink-0">DW</div>
-                          <div class="flex flex-col">
-                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Dewi Wijaya</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-0782</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Chemical Peeling</span>
-                      </td>
-                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Amanda S.</td>
-                      <td class="px-lg py-lg text-right">
-                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
-                      </td>
-                    </tr>
-
-                    <!-- Patient 4 -->
-                    <tr class="hover:bg-primary/5 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group record-row" data-service="consultation" data-status="selesai" data-name="Rina Melati" data-id="GS-2023-1122" data-age="35" data-gender="Perempuan" data-blood="125/85 mmHg" data-allergy="Sulfa" data-date="11 Okt 2023 14:20 WIB" data-summary="Konsultasi awal keluhan flek hitam setelah paparan matahari. Diberikan resep krim malam khusus dan serum pencerah." data-avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M">
-                      <td class="px-lg py-lg">
-                        <div class="flex flex-col">
-                          <span class="font-title-sm text-title-sm text-on-surface dark:text-slate-100">11 Okt 2023</span>
-                          <span class="text-[12px] text-on-surface-variant dark:text-slate-400">14:20 WIB</span>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <div class="flex items-center gap-md">
-                          <div class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-[12px] flex-shrink-0">RM</div>
-                          <div class="flex flex-col">
-                            <span class="font-body-md text-body-md font-semibold text-on-surface dark:text-slate-100">Rina Melati</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-slate-400">ID: GS-2023-1122</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="px-lg py-lg">
-                        <span class="inline-block px-sm py-xs bg-tertiary-fixed-dim/20 text-tertiary dark:text-tertiary-fixed font-label-caps text-label-caps rounded">Consultation</span>
-                      </td>
-                      <td class="px-lg py-lg font-body-sm text-body-sm text-on-surface dark:text-slate-300">Dr. Sarah L.</td>
-                      <td class="px-lg py-lg text-right">
-                        <button class="text-primary dark:text-primary-fixed-dim hover:underline font-title-sm text-title-sm">Detail</button>
-                      </td>
-                    </tr>
+                    <?php endif; ?>
                   </tbody>
                 </table>
               </div>
 
               <!-- Table Footer & Pagination -->
               <div class="mt-auto border-t border-outline-variant dark:border-slate-800 p-lg flex justify-between items-center bg-surface-container-lowest dark:bg-slate-900">
-                <span class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="record-count">Menampilkan 1-4 dari 4 data</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="record-count">Menampilkan <?= count($medical_records) ?> dari <?= count($medical_records) ?> data</span>
                 <div class="flex gap-sm">
                   <button class="px-md py-sm border border-outline-variant dark:border-slate-800 rounded hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
                     <span class="material-symbols-outlined text-[20px] dark:text-slate-300 flex items-center">chevron_left</span>
@@ -395,12 +453,12 @@
                 </div>
                 <div class="p-lg space-y-lg">
                   <div class="flex items-start gap-md">
-                    <img id="detail-avatar" alt="Selected Patient Avatar" class="w-16 h-16 rounded-xl object-cover border border-outline-variant dark:border-slate-800 flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvRxKGLYp63qoH-1uiQcczc2VM0ucbHrcJBhD9BjtL6hUYIofyqaLCQfYM3kZVaRFOd6nABA2T0IfWx2r6j3QuxSR_P_1_nQumo_qN73Xuo9FND3o13HBAH0cC37ZzERjuBdFiknnS3-ZIsTNs881Mozh6mmp25tY0NiSoUv9NMndrXeWtNPKTlWJsqKYlbNXC7AlqjLzHpe4b7b71gV58Q5D45tQSi69cdLAQFSY2Q6zWcQO3BAld2t8bpgUe3Q7fbaWkxrmK8Aw"/>
+                    <img id="detail-avatar" alt="Selected Patient Avatar" class="w-16 h-16 rounded-xl object-cover border border-outline-variant dark:border-slate-800 flex-shrink-0" src="<?= h($selected_avatar) ?>"/>
                     <div>
-                      <h4 class="font-title-sm text-title-sm text-on-surface dark:text-slate-100" id="detail-name">Siti Nurhaliza</h4>
-                      <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="detail-meta">28 Tahun • Perempuan</p>
+                      <h4 class="font-title-sm text-title-sm text-on-surface dark:text-slate-100" id="detail-name"><?= h($selected_record['nama_pasien'] ?? 'Belum ada data') ?></h4>
+                      <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-slate-400" id="detail-meta"><?= h($selected_age) ?> Tahun - <?= h($selected_record['jenis_kelamin'] ?? '-') ?></p>
                       <span class="inline-flex items-center gap-xs text-[12px] font-semibold text-primary dark:text-primary-fixed-dim">
-                        <span class="w-2 h-2 rounded-full bg-primary"></span> Pasien Reguler
+                        <span class="w-2 h-2 rounded-full bg-primary"></span> <?= h(($selected_record['kategori_pasien'] ?? 'reguler') === 'vip' ? 'VIP / Member' : 'Pasien Reguler') ?>
                       </span>
                     </div>
                   </div>
@@ -408,34 +466,20 @@
                   <div class="space-y-md">
                     <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg space-y-sm">
                       <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Ringkasan Medis</p>
-                      <p class="font-body-sm text-body-sm text-on-surface dark:text-slate-200" id="detail-summary">Pasien mengeluhkan hiperpigmentasi ringan di area pipi. Dilakukan treatment Facial Rejuvenation tahap 2 dengan serum pencerah dosis rendah.</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-md">
-                      <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg">
-                        <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Tekanan Darah</p>
-                        <p class="font-title-sm text-title-sm text-on-surface dark:text-slate-200" id="detail-blood">115/80 mmHg</p>
-                      </div>
-                      <div class="p-md bg-surface-container-low dark:bg-slate-900 rounded-lg">
-                        <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Alergi Obat</p>
-                        <p class="font-title-sm text-title-sm text-primary dark:text-primary-fixed-dim" id="detail-allergy">Tidak Ada</p>
-                      </div>
+                      <p class="font-body-sm text-body-sm text-on-surface dark:text-slate-200" id="detail-summary"><?= h($selected_summary) ?></p>
                     </div>
                   </div>
-
+ 
                   <div class="space-y-sm">
                     <p class="font-label-caps text-label-caps text-on-surface-variant dark:text-slate-400 uppercase">Riwayat Tindakan</p>
                     <ul class="space-y-xs">
                       <li class="flex items-center justify-between font-body-sm text-body-sm py-xs border-b border-outline-variant dark:border-slate-800">
-                        <span class="text-on-surface dark:text-slate-200">Laser Treatment</span>
-                        <span class="text-on-surface-variant dark:text-slate-400 italic">15 Sep 2023</span>
-                      </li>
-                      <li class="flex items-center justify-between font-body-sm text-body-sm py-xs border-b border-outline-variant dark:border-slate-800">
-                        <span class="text-on-surface dark:text-slate-200">Consultation</span>
-                        <span class="text-on-surface-variant dark:text-slate-400 italic">01 Sep 2023</span>
+                        <span class="text-on-surface dark:text-slate-200" id="detail-service-history"><?= h($selected_record['layanan'] ?? 'Belum ada layanan') ?></span>
+                        <span class="text-on-surface-variant dark:text-slate-400 italic" id="detail-date-history"><?= h($selected_record ? formatTanggalIndonesia($selected_record['tanggal_kunjungan']) : '-') ?></span>
                       </li>
                     </ul>
                   </div>
-                  <button class="w-full flex items-center justify-center gap-sm border border-primary dark:border-primary-fixed-dim/30 text-primary dark:text-primary-fixed-dim px-lg py-sm rounded-lg font-title-sm text-title-sm hover:bg-primary/5 dark:hover:bg-primary-fixed-dim/10 transition-all">
+                  <button id="btn-view-all-records" class="w-full flex items-center justify-center gap-sm border border-primary dark:border-primary-fixed-dim/30 text-primary dark:text-primary-fixed-dim px-lg py-sm rounded-lg font-title-sm text-title-sm hover:bg-primary/5 dark:hover:bg-primary-fixed-dim/10 transition-all">
                     <span class="material-symbols-outlined">description</span>
                     Lihat Semua Rekam Medis
                   </button>
@@ -460,11 +504,17 @@
       // Initialize theme toggling
       setupThemeToggle('theme-toggle', 'dark-icon', 'light-icon');
 
-      // Initialize current date display (Indonesian Locale)
-      const dateDisplay = document.getElementById('current-date-display');
-      if (dateDisplay) {
-        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-        dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
+      // Initialize calendar select input value based on URL parameter or today
+      const calendarSelect = document.getElementById('calendar-select');
+      if (calendarSelect) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tanggalParam = urlParams.get('tanggal');
+        if (tanggalParam) {
+          calendarSelect.value = tanggalParam;
+        } else {
+          const today = new Date().toISOString().split('T')[0];
+          calendarSelect.value = today;
+        }
       }
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -480,8 +530,8 @@
         const detailName = document.getElementById('detail-name');
         const detailMeta = document.getElementById('detail-meta');
         const detailSummary = document.getElementById('detail-summary');
-        const detailBlood = document.getElementById('detail-blood');
-        const detailAllergy = document.getElementById('detail-allergy');
+        const detailServiceHistory = document.getElementById('detail-service-history');
+        const detailDateHistory = document.getElementById('detail-date-history');
 
         let activeStatusFilter = 'all';
 
@@ -499,24 +549,53 @@
             const age = this.getAttribute('data-age');
             const gender = this.getAttribute('data-gender');
             const summary = this.getAttribute('data-summary');
-            const blood = this.getAttribute('data-blood');
-            const allergy = this.getAttribute('data-allergy');
             const avatar = this.getAttribute('data-avatar');
+            const serviceLabel = this.getAttribute('data-service-label');
+            const dateLabel = this.getAttribute('data-date-label');
 
             if (detailName) detailName.textContent = name;
-            if (detailMeta) detailMeta.textContent = `${age} Tahun • ${gender}`;
+            if (detailMeta) detailMeta.textContent = `${age} Tahun - ${gender}`;
             if (detailSummary) detailSummary.textContent = summary;
-            if (detailBlood) detailBlood.textContent = blood;
-            if (detailAllergy) {
-              detailAllergy.textContent = allergy;
-              if (allergy === 'Tidak Ada') {
-                detailAllergy.className = 'font-title-sm text-title-sm text-primary';
-              } else {
-                detailAllergy.className = 'font-title-sm text-title-sm text-secondary';
+            if (detailAvatar) detailAvatar.src = avatar;
+            if (detailServiceHistory) detailServiceHistory.textContent = serviceLabel;
+            if (detailDateHistory) detailDateHistory.textContent = dateLabel;
+          });
+        });
+
+        // Make Detail action button click trigger the row click dynamically
+        document.querySelectorAll('.btn-detail-row').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const row = this.closest('.record-row');
+            if (row) {
+              row.click();
+              // Scroll to details on mobile screens if needed
+              const target = document.getElementById('detail-name');
+              if (target && window.innerWidth < 1024) {
+                target.scrollIntoView({ behavior: 'smooth' });
               }
             }
-            if (detailAvatar) detailAvatar.src = avatar;
           });
+        });
+
+        // "Lihat Semua Rekam Medis" click event handler
+        const btnViewAll = document.getElementById('btn-view-all-records');
+        btnViewAll?.addEventListener('click', function() {
+          const activeRow = document.querySelector('.record-row.bg-primary\\/5');
+          if (!activeRow) {
+            alert('Silakan pilih salah satu rekam medis terlebih dahulu.');
+            return;
+          }
+          const name = activeRow.getAttribute('data-name');
+          const id = activeRow.getAttribute('data-id');
+          const age = activeRow.getAttribute('data-age');
+          const gender = activeRow.getAttribute('data-gender');
+          const date = activeRow.getAttribute('data-date-label');
+          const summary = activeRow.getAttribute('data-summary');
+          const service = activeRow.getAttribute('data-service-label');
+
+          alert(`📋 REKAM MEDIS OPERASIONAL PASIEN\n---------------------------------------\nID Pasien: ${id}\nNama Pasien: ${name}\nUmur/Gender: ${age} Tahun - ${gender}\nTanggal Kunjungan: ${date}\nLayanan: ${service}\n\n[RINGKASAN DIAGNOSA & ANAMNESIS]:\n${summary}`);
         });
 
         // Filter Functionality
@@ -530,15 +609,22 @@
           recordRows.forEach(row => {
             const name = row.getAttribute('data-name').toLowerCase();
             const id = row.getAttribute('data-id').toLowerCase();
-            const service = row.getAttribute('data-service');
+            const service = row.getAttribute('data-service') || '';
             const status = row.getAttribute('data-status');
+            const visitDate = row.getAttribute('data-date-iso');
 
             const matchesQuery = query === '' || name.includes(query) || id.includes(query);
-            const matchesService = selectedService === 'all' || service === selectedService;
+            const matchesService = selectedService === 'all' || service.includes(`,${selectedService},`);
             const matchesStatus = activeStatusFilter === 'all' || status === activeStatusFilter;
 
-            // Note: Period matches are simulated here (all pass for demo database)
-            const matchesPeriod = true;
+            const rowDate = visitDate ? new Date(`${visitDate}T00:00:00`) : null;
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const matchesPeriod =
+              selectedPeriod === 'all' ||
+              (rowDate && selectedPeriod === 'today' && rowDate.getTime() === today.getTime()) ||
+              (rowDate && selectedPeriod === 'week' && rowDate >= new Date(today.getTime() - (6 * 24 * 60 * 60 * 1000))) ||
+              (rowDate && selectedPeriod === 'month' && rowDate.getMonth() === today.getMonth() && rowDate.getFullYear() === today.getFullYear());
 
             if (matchesQuery && matchesService && matchesStatus && matchesPeriod) {
               row.style.display = '';
@@ -549,7 +635,7 @@
           });
 
           if (countSpan) {
-            countSpan.textContent = `Menampilkan 1-${visibleCount} dari ${visibleCount} data`;
+            countSpan.textContent = `Menampilkan ${visibleCount} dari ${recordRows.length} data`;
           }
         }
 
@@ -579,3 +665,6 @@
     </script>
   </body>
 </html>
+
+
+

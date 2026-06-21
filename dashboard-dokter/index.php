@@ -16,50 +16,79 @@
 // --- SERTAKAN FILE KONEKSI DATABASE ---
 require_once __DIR__ . '/../koneksi.php';
 
+// --- INITIALIZE SESSION & DYNAMIC DOCTOR SWITCHER ---
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (isset($_GET['switch_dokter'])) {
+    $sw = intval($_GET['switch_dokter']);
+    if ($sw === 1 || $sw === 2) {
+        $_SESSION['id_dokter'] = $sw;
+        // Redirect to self without switch_dokter param
+        $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
+        $params = $_GET;
+        unset($params['switch_dokter']);
+        if (!empty($params)) {
+            $clean_url .= '?' . http_build_query($params);
+        }
+        header("Location: " . $clean_url);
+        exit();
+    }
+}
+$id_dokter_login = $_SESSION['id_dokter'] ?? 1; // Default to 1 (dr. Sarah)
+
+// Fetch current doctor details from database
+try {
+    $stmt_doc = $pdo->prepare("
+        SELECT d.nama_lengkap, s.nama AS spesialisasi
+        FROM dokter d
+        JOIN ref_spesialisasi s ON d.id_spesialisasi = s.id
+        WHERE d.id_dokter = :id
+    ");
+    $stmt_doc->execute([':id' => $id_dokter_login]);
+    $doc_info = $stmt_doc->fetch(PDO::FETCH_ASSOC);
+    $nama_dokter = $doc_info['nama_lengkap'] ?? 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = $doc_info['spesialisasi'] ?? 'Spesialis Kulit & Kelamin';
+} catch (PDOException $e) {
+    $nama_dokter = 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = 'Spesialis Kulit & Kelamin';
+}
+
+// Map profile photo
+if ($id_dokter_login == 1) {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI';
+} else {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc';
+}
+
 // --- TANGKAP TANGGAL TERPILIH DARI KALENDER (GET) ---
 // Jika tidak ada parameter tanggal, default ke hari ini (date('Y-m-d'))
 $tanggal_pilihan = $_GET['tanggal'] ?? date('Y-m-d');
 
-/**
- * ============================================================
- * QUERY DASHBOARD 2: DAFTAR ANTREAN PASIEN DOKTER
- * ============================================================
- * Mengambil data kunjungan pasien yang:
- * - id_dokter = 1 (dokter yang sedang login, hardcoded untuk demo)
- * - tanggal_kunjungan = tanggal pilihan
- * - id_status = 1 (status "Menunggu")
- */
-/**
- * ============================================================
- * QUERY DASHBOARD 2: RINGKASAN & DAFTAR ANTREAN PASIEN DOKTER
- * ============================================================
- * Menggunakan Stored Procedure untuk mengambil data:
- * - sp_dashboard_dokter_cards(1) -> Statistik Janji Temu dr. Sarah
- * - sp_dashboard_dokter_antrian(1) -> Antrean Pasien dr. Sarah hari ini
- * - Kunjungan Map -> Untuk memetakan no_antrian ke id_kunjungan
- */
-
-// 1. Panggil Procedure/Query Statistik Card
+// 1. Mengambil data statistik janji temu (total, menunggu, selesai) menggunakan Stored Procedure
 try {
     if ($tanggal_pilihan == date('Y-m-d')) {
-        $stmt_doc_cards = $pdo->query("CALL sp_dashboard_dokter_cards(1)");
+        // Panggil procedure MySQL untuk mengambil ringkasan status antrean hari ini
+        $stmt_doc_cards = $pdo->prepare("CALL sp_dashboard_dokter_cards(:id)");
+        $stmt_doc_cards->execute([':id' => $id_dokter_login]);
         $doc_cards = $stmt_doc_cards->fetch() ?: [];
-        $stmt_doc_cards->closeCursor();
+        $stmt_doc_cards->closeCursor(); // Tutup cursor agar koneksi database siap mengeksekusi query berikutnya
         $total_janji = $doc_cards['pasien_hari_ini'] ?? 0;
         $total_menunggu = $doc_cards['menunggu_antrian'] ?? 0;
         $total_selesai = $doc_cards['sudah_diperiksa'] ?? 0;
     } else {
         // Query dinamis untuk hari selain hari ini
-        $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND tanggal_kunjungan = ?");
-        $stmt_total->execute([$tanggal_pilihan]);
+        $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = :id AND tanggal_kunjungan = :tgl");
+        $stmt_total->execute([':id' => $id_dokter_login, ':tgl' => $tanggal_pilihan]);
         $total_janji = $stmt_total->fetchColumn() ?: 0;
 
-        $stmt_menunggu = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND id_status = 1 AND tanggal_kunjungan = ?");
-        $stmt_menunggu->execute([$tanggal_pilihan]);
+        $stmt_menunggu = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = :id AND id_status = 1 AND tanggal_kunjungan = :tgl");
+        $stmt_menunggu->execute([':id' => $id_dokter_login, ':tgl' => $tanggal_pilihan]);
         $total_menunggu = $stmt_menunggu->fetchColumn() ?: 0;
 
-        $stmt_selesai = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = 1 AND id_status = 3 AND tanggal_kunjungan = ?");
-        $stmt_selesai->execute([$tanggal_pilihan]);
+        $stmt_selesai = $pdo->prepare("SELECT COUNT(*) FROM kunjungan WHERE id_dokter = :id AND id_status = 3 AND tanggal_kunjungan = :tgl");
+        $stmt_selesai->execute([':id' => $id_dokter_login, ':tgl' => $tanggal_pilihan]);
         $total_selesai = $stmt_selesai->fetchColumn() ?: 0;
     }
 } catch (PDOException $e) {
@@ -71,7 +100,8 @@ try {
 // 2. Panggil Procedure/Query Daftar Antrean Pasien
 try {
     if ($tanggal_pilihan == date('Y-m-d')) {
-        $stmt_antrean = $pdo->query("CALL sp_dashboard_dokter_antrian(1)");
+        $stmt_antrean = $pdo->prepare("CALL sp_dashboard_dokter_antrian(:id)");
+        $stmt_antrean->execute([':id' => $id_dokter_login]);
         $daftar_antrean = $stmt_antrean->fetchAll();
         $stmt_antrean->closeCursor();
     } else {
@@ -87,10 +117,10 @@ try {
             JOIN pasien p ON k.id_pasien = p.id_pasien
             JOIN ref_jenis_kelamin jk ON p.id_jenis_kelamin = jk.id
             JOIN ref_status_kunjungan sk ON k.id_status = sk.id
-            WHERE k.id_dokter = 1 AND k.tanggal_kunjungan = ?
+            WHERE k.id_dokter = :id AND k.tanggal_kunjungan = :tgl
             ORDER BY k.no_antrian
         ");
-        $stmt_antrean->execute([$tanggal_pilihan]);
+        $stmt_antrean->execute([':id' => $id_dokter_login, ':tgl' => $tanggal_pilihan]);
         $daftar_antrean = $stmt_antrean->fetchAll();
     }
 } catch (PDOException $e) {
@@ -100,7 +130,8 @@ try {
 // 3. Map no_antrian ke id_kunjungan untuk Aksi Input Rekam Medis
 $kunjungan_map = [];
 try {
-    $stmt_map = $pdo->query("SELECT no_antrian, id_kunjungan FROM kunjungan WHERE id_dokter = 1 AND tanggal_kunjungan = CURDATE()");
+    $stmt_map = $pdo->prepare("SELECT no_antrian, id_kunjungan FROM kunjungan WHERE id_dokter = :id AND tanggal_kunjungan = CURDATE()");
+    $stmt_map->execute([':id' => $id_dokter_login]);
     $kunjungan_map = $stmt_map->fetchAll(PDO::FETCH_KEY_PAIR);
 } catch (PDOException $e) {
     // Abaikan jika gagal
@@ -271,13 +302,44 @@ try {
 
           <div class="h-8 w-px bg-outline-variant"></div>
 
-          <div class="flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <p class="font-title-sm text-title-sm leading-none text-primary">dr. Sarah Wijaya, Sp.KK</p>
-              <p class="font-label-caps text-[10px] text-on-surface-variant">DOKTER SPESIALIS</p>
-            </div>
-            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
-              <img alt="Doctor Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCizprgqdDImNl_3N10D2QU4V56cW0d9IEcu6PwfSVJ8d1EfXJIpqdOGo4heFc2roP5DOUh1SaGno_rfp1fhhOZCJgTO4GB060lETXOc1LhZ6SQglNuVrqIcVBUv8vtYPbhimTcFeXJlHuvbgaVVX6s6fvVtxN94ui8dRMkRfc8a1GNoMqQc56aczHWi0Sj3QcmQiUQqXnCAyehUUmStxNe_LST_wLpqSfcZ5lmglVgNYqEEVnmkkqFtW0sZ-Wv_2BvVXAo5ZNOFaE"/>
+          <!-- Doctor Switcher Dropdown -->
+          <div class="relative">
+            <button id="profile-menu-button" class="flex items-center gap-3 hover:bg-surface-container-low p-1.5 rounded-lg transition-all outline-none">
+              <div class="text-right hidden sm:block">
+                <p class="font-title-sm text-title-sm leading-none text-primary"><?= htmlspecialchars($nama_dokter) ?></p>
+                <p class="font-label-caps text-[10px] text-on-surface-variant"><?= htmlspecialchars($spesialisasi_dokter) ?></p>
+              </div>
+              <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+                <img alt="Doctor Profile" class="w-full h-full object-cover" src="<?= $foto_dokter ?>"/>
+              </div>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="profile-dropdown" class="absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg hidden z-50">
+              <div class="p-2 border-b border-outline-variant">
+                <p class="text-[10px] font-label-caps text-on-surface-variant uppercase px-3 py-1">Ganti Dokter</p>
+              </div>
+              <div class="p-1 space-y-1">
+                <a href="?switch_dokter=1<?= isset($_GET['tanggal']) ? '&tanggal=' . urlencode($_GET['tanggal']) : '' ?>" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 1 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Sarah Sp.KK</p>
+                    <p class="text-[9px] text-on-surface-variant">Dermatologist</p>
+                  </div>
+                </a>
+                <a href="?switch_dokter=2<?= isset($_GET['tanggal']) ? '&tanggal=' . urlencode($_GET['tanggal']) : '' ?>" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 2 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Adrian</p>
+                    <p class="text-[9px] text-on-surface-variant">Aesthetician</p>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -535,6 +597,19 @@ try {
       if (dateDisplay) {
         const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
         dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
+      }
+
+      // Profile Dropdown Toggle
+      const profileButton = document.getElementById('profile-menu-button');
+      const profileDropdown = document.getElementById('profile-dropdown');
+      if (profileButton && profileDropdown) {
+        profileButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profileDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+          profileDropdown.classList.add('hidden');
+        });
       }
     </script>
   </body>

@@ -137,34 +137,60 @@ function formatRupiah($angka) {
 }
 
 // --- QUERY 5 VIEW UNTUK LAPORAN MANAJEMEN (BAB VII) ---
+
+// 1. Mengambil data statistik kunjungan pasien per bulan
 try {
     $v_kunjungan_bulanan = $pdo->query("SELECT * FROM v_laporan_kunjungan_bulanan")->fetchAll();
 } catch (PDOException $e) {
     $v_kunjungan_bulanan = [];
 }
 
+// 2. Mengambil data jenis perawatan yang paling banyak dipesan
 try {
     $v_layanan_terlaris = $pdo->query("SELECT * FROM v_laporan_layanan_terlaris")->fetchAll();
 } catch (PDOException $e) {
     $v_layanan_terlaris = [];
 }
 
+// 3. Mengambil data pasien dengan frekuensi kunjungan paling aktif
 try {
     $v_pasien_teraktif = $pdo->query("SELECT * FROM v_laporan_pasien_teraktif")->fetchAll();
 } catch (PDOException $e) {
     $v_pasien_teraktif = [];
 }
 
+// 4. Mengambil data obat/skincare dengan stok di bawah batas minimum (perlu restok)
 try {
     $v_stok_minimum = $pdo->query("SELECT * FROM v_laporan_stok_minimum")->fetchAll();
 } catch (PDOException $e) {
     $v_stok_minimum = [];
 }
 
+// 5. Mengambil data kategori & status pasien (VIP/Reguler - dikontrol oleh admin)
 try {
-    $v_pendapatan_tahunan = $pdo->query("SELECT * FROM v_laporan_pendapatan_tahunan")->fetchAll();
+    $v_status_pasien = $pdo->query("
+        SELECT 
+            p.id_pasien,
+            p.kode_pasien AS kode_pasien,
+            p.nama_lengkap AS nama_pasien,
+            p.kategori AS kategori_raw,
+            CASE
+                WHEN p.kategori = 'vip' THEN 'VIP'
+                WHEN p.kategori = 'member' THEN 'Member'
+                ELSE 'Reguler'
+            END AS kategori_pasien,
+            CONCAT(COUNT(k.id_kunjungan), ' Kali') AS total_kunjungan,
+            CASE
+                WHEN p.no_telepon IS NOT NULL AND p.no_telepon != '' THEN 'Aktif'
+                ELSE 'Tidak Aktif'
+            END AS status_akun
+        FROM pasien p
+        JOIN kunjungan k ON p.id_pasien = k.id_pasien
+        GROUP BY p.id_pasien, p.kode_pasien, p.nama_lengkap, p.kategori, p.no_telepon
+        ORDER BY p.kategori DESC, COUNT(k.id_kunjungan) DESC, p.kode_pasien ASC
+    ")->fetchAll();
 } catch (PDOException $e) {
-    $v_pendapatan_tahunan = [];
+    $v_status_pasien = [];
 }
 
 // --- FUNGSI HELPER UNTUK RENDER TABEL DATABASE VIEW SECARA DINAMIS ---
@@ -182,12 +208,32 @@ function renderReportTable($view_data) {
         echo '  <tbody class="divide-y divide-outline-variant/20 dark:divide-y-0 text-body-sm">';
         foreach ($view_data as $row) {
             echo '  <tr class="text-on-surface-variant dark:text-slate-300 odd:bg-transparent even:bg-surface-container-low/10 dark:even:bg-slate-800/20 hover:bg-surface-container-low/40 dark:hover:bg-slate-800/40 transition-colors">';
-            foreach ($row as $val) {
-                // Formatting Rupiah jika nilai berupa angka besar dan kolom terkait keuangan
-                if (is_numeric($val) && (strpos($val, '.') !== false || $val > 1000) && ($val == (float)$val)) {
-                    $formatted_val = 'Rp ' . number_format($val, 0, ',', '.');
-                } else {
-                    $formatted_val = htmlspecialchars($val ?? '-');
+            foreach ($row as $col_name => $val) {
+                $formatted_val = htmlspecialchars($val ?? '-');
+                if (is_numeric($val)) {
+                    // 1. Cek jika kolom persen
+                    if (strpos($col_name, 'persen') !== false) {
+                        $formatted_val = number_format($val, 1, ',', '.') . '%';
+                    }
+                    // 2. Cek jika kolom terkait keuangan
+                    elseif (
+                        strpos($col_name, 'harga') !== false || 
+                        strpos($col_name, 'pendapatan') !== false || 
+                        strpos($col_name, 'belanja') !== false || 
+                        strpos($col_name, 'biaya') !== false || 
+                        strpos($col_name, 'rata_rata') !== false || 
+                        strpos($col_name, 'tertinggi') !== false || 
+                        strpos($col_name, 'total_layanan') !== false ||
+                        strpos($col_name, 'total_obat') !== false ||
+                        $col_name === 'grand_total' || 
+                        $col_name === 'subtotal'
+                    ) {
+                        $formatted_val = 'Rp ' . number_format($val, 0, ',', '.');
+                    }
+                    // 3. Jika numerik biasa (seperti total kunjungan, umur, jumlah transaksi)
+                    else {
+                        $formatted_val = number_format($val, 0, ',', '.');
+                    }
                 }
                 echo '    <td class="px-lg py-md">' . $formatted_val . '</td>';
             }
@@ -321,15 +367,19 @@ function renderReportTable($view_data) {
           <span class="material-symbols-outlined mr-3">dashboard</span>
           <span class="font-label-caps text-label-caps">Ringkasan Dashboard</span>
         </a>
-        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="rekam-medis.html">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="rekam-medis.php">
           <span class="material-symbols-outlined mr-3">medical_services</span>
           <span class="font-label-caps text-label-caps">Data Pasien &amp; Rekam Medis</span>
         </a>
-        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="inventori.html">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="inventori.php">
           <span class="material-symbols-outlined mr-3">inventory_2</span>
           <span class="font-label-caps text-label-caps">Inventori Produk Skincare</span>
         </a>
-        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="log-keamanan.html">
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="transaksi.php">
+          <span class="material-symbols-outlined mr-3">payments</span>
+          <span class="font-label-caps text-label-caps">Transaksi &amp; Pembayaran</span>
+        </a>
+        <a class="group relative flex items-center px-lg py-3 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-800/50 transition-colors" href="log-keamanan.php">
           <span class="material-symbols-outlined mr-3">security</span>
           <span class="font-label-caps text-label-caps">Log Keamanan Sistem</span>
         </a>
@@ -382,11 +432,11 @@ function renderReportTable($view_data) {
 
           <div class="flex items-center gap-3">
             <div class="text-right hidden sm:block">
-              <p class="font-title-sm text-title-sm leading-none text-primary">Dr. Sarah Wijaya</p>
+              <p class="font-title-sm text-title-sm leading-none text-primary">Admin Nanda</p>
               <p class="font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400">SUPER ADMIN</p>
             </div>
-            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
-              <img alt="Administrator Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvj1BVNZb6Yrkc_b_HOHa5pfWWvoL5tW5HxnVdZERiif6OwI3aNZ8FDP2oycGimvuC4M8rNibiYEfnvjAw66DBFbPAo5ScqoW7vmXcgCaO7wZxYK2Kg8ammdNGCcPZkCqR0mrun9dK9rYA9EP1Q9AJEn4khxh3RMxXKeVYh3OZ3nzisYhQlWS3pz578DuOX02UIO-1fSOmcXMnCXClJEwjTI1Bz9y9qrr8v5KPm22Xt0OHseZDh77F8QnNhjNLWiZzsSmrGgAax5M"/>
+            <div class="w-10 h-10 rounded-full border-2 border-primary-container bg-primary/10 flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-[24px]">person</span>
             </div>
           </div>
         </div>
@@ -657,8 +707,8 @@ function renderReportTable($view_data) {
             <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-stok')">
               Stok Minimum
             </button>
-            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-pendapatan')">
-              Pendapatan Tahunan
+            <button class="tab-btn px-4 py-2 rounded-lg font-bold text-xs bg-surface-container-low dark:bg-slate-800 hover:bg-surface-container-high dark:hover:bg-slate-700 text-on-surface-variant dark:text-slate-300 transition-all" onclick="switchReportTab(event, 'tab-status-pasien')">
+              Kategori Pasien
             </button>
           </div>
 
@@ -697,11 +747,85 @@ function renderReportTable($view_data) {
               </div>
             </div>
 
-            <!-- Tab 5: Pendapatan Tahunan -->
-            <div id="tab-pendapatan" class="report-tab-panel hidden space-y-md">
-              <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Pendapatan Tahunan (v_laporan_pendapatan_tahunan)</h3>
+            <!-- Tab 5: Kategori & Status Pasien -->
+            <div id="tab-status-pasien" class="report-tab-panel hidden space-y-md">
+              <div class="flex items-start justify-between flex-wrap gap-2">
+                <div>
+                  <h3 class="font-title-sm text-sm font-bold text-primary dark:text-primary-fixed-dim">Laporan Kategori &amp; Status Pasien (v_laporan_status_pasien)</h3>
+                  <p class="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5">Admin dapat mengubah kategori pasien menjadi <span class="text-amber-600 dark:text-amber-400 font-bold">★ VIP</span>, <span class="text-indigo-600 dark:text-indigo-400 font-bold">👤 Member</span>, atau <span class="text-blue-600 dark:text-blue-400 font-bold">Reguler</span> secara langsung.</p>
+                </div>
+                <div class="text-xs text-on-surface-variant dark:text-slate-500 italic bg-surface-container-low dark:bg-slate-800 px-3 py-1.5 rounded-lg">
+                  Perubahan langsung tersimpan ke database
+                </div>
+              </div>
               <div class="overflow-x-auto border border-outline-variant/30 dark:border-slate-800 rounded-xl">
-                <?php renderReportTable($v_pendapatan_tahunan); ?>
+                <?php if (!empty($v_status_pasien)) : ?>
+                <table class="w-full text-left border-collapse">
+                  <thead class="sticky top-0 bg-surface-container-low dark:bg-[#1e293b] text-label-caps text-on-surface-variant dark:text-slate-400 border-b border-outline-variant/30 dark:border-transparent">
+                    <tr>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">ID Pasien</th>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">Nama Pasien</th>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">Kategori</th>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">Total Kunjungan</th>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">Status Akun</th>
+                      <th class="px-lg py-md uppercase tracking-wider text-[11px] font-bold">Ubah Kategori</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-outline-variant/20 dark:divide-y-0 text-body-sm">
+                    <?php foreach ($v_status_pasien as $row) :
+                        $kat = $row['kategori_raw'];
+                        $is_aktif = $row['status_akun'] === 'Aktif';
+
+                        // Tentukan style badge berdasarkan 3 kategori
+                        if ($kat === 'vip') {
+                            $badge_style = 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
+                            $badge_icon = '★ ';
+                        } elseif ($kat === 'member') {
+                            $badge_style = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300';
+                            $badge_icon = '👤 ';
+                        } else {
+                            $badge_style = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+                            $badge_icon = '';
+                        }
+                    ?>
+                    <tr id="row-pasien-<?= $row['id_pasien'] ?>" class="text-on-surface-variant dark:text-slate-300 odd:bg-transparent even:bg-surface-container-low/10 dark:even:bg-slate-800/20 hover:bg-surface-container-low/40 dark:hover:bg-slate-800/40 transition-colors">
+                      <td class="px-lg py-md font-mono text-xs font-bold text-on-surface dark:text-slate-100"><?= htmlspecialchars($row['kode_pasien']) ?></td>
+                      <td class="px-lg py-md font-medium text-on-surface dark:text-slate-100"><?= htmlspecialchars($row['nama_pasien']) ?></td>
+                      <td class="px-lg py-md" id="badge-<?= $row['id_pasien'] ?>">
+                        <span class="inline-flex items-center gap-1 px-sm py-0.5 rounded-full font-bold text-[11px] <?= $badge_style ?>">
+                          <?= $badge_icon ?><?= htmlspecialchars($row['kategori_pasien']) ?>
+                        </span>
+                      </td>
+                      <td class="px-lg py-md">
+                        <span class="inline-flex items-center gap-xs px-sm py-1 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-fixed-dim font-bold text-[12px]">
+                          <?= htmlspecialchars($row['total_kunjungan']) ?>
+                        </span>
+                      </td>
+                      <td class="px-lg py-md">
+                        <span class="inline-flex items-center gap-1 px-sm py-0.5 rounded-full font-bold text-[11px] <?= $is_aktif ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' ?>">
+                          <span class="w-1.5 h-1.5 rounded-full <?= $is_aktif ? 'bg-green-500' : 'bg-red-500' ?>"></span>
+                          <?= htmlspecialchars($row['status_akun']) ?>
+                        </span>
+                      </td>
+                      <td class="px-lg py-md">
+                        <select
+                          id="select-kategori-<?= $row['id_pasien'] ?>"
+                          onchange="updateKategori(<?= $row['id_pasien'] ?>, this.value, this)"
+                          class="bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold transition-all outline-none text-on-surface dark:text-slate-100 cursor-pointer focus:ring-1 focus:ring-primary">
+                          <option value="reguler" <?= $kat === 'reguler' ? 'selected' : '' ?>>Reguler</option>
+                          <option value="member" <?= $kat === 'member' ? 'selected' : '' ?>>Member</option>
+                          <option value="vip" <?= $kat === 'vip' ? 'selected' : '' ?>>VIP</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+                <?php else : ?>
+                <div class="p-xl text-center text-on-surface-variant dark:text-slate-400 italic text-sm">
+                  Belum ada data pasien terdaftar.
+                </div>
+                <?php endif; ?>
               </div>
             </div>
 
@@ -742,6 +866,50 @@ function renderReportTable($view_data) {
         // Add active style classes to clicked button
         event.currentTarget.classList.remove('bg-surface-container-low', 'dark:bg-slate-800', 'text-on-surface-variant', 'dark:text-slate-300', 'hover:bg-surface-container-high', 'dark:hover:bg-slate-700');
         event.currentTarget.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'hover:brightness-110');
+      }
+
+      // ===== UPDATE KATEGORI PASIEN (AJAX) =====
+      function updateKategori(idPasien, kategoriTarget, selectEl) {
+        const labels = { 'vip': 'VIP', 'member': 'Member', 'reguler': 'Reguler' };
+        const confirmMsg = `Ubah kategori pasien ini menjadi ${labels[kategoriTarget]}?`;
+
+        if (!confirm(confirmMsg)) {
+          window.location.reload();
+          return;
+        }
+
+        selectEl.disabled = true;
+
+        const formData = new FormData();
+        formData.append('id_pasien', idPasien);
+        formData.append('kategori', kategoriTarget);
+
+        fetch('api_toggle_vip.php', { method: 'POST', body: formData })
+          .then(r => r.json())
+          .then(data => {
+            selectEl.disabled = false;
+            if (data.success) {
+              // Update badge secara dinamis
+              const badgeCell = document.getElementById(`badge-${idPasien}`);
+              let badgeHTML = '';
+              if (kategoriTarget === 'vip') {
+                badgeHTML = `<span class="inline-flex items-center gap-1 px-sm py-0.5 rounded-full font-bold text-[11px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">★ VIP</span>`;
+              } else if (kategoriTarget === 'member') {
+                badgeHTML = `<span class="inline-flex items-center gap-1 px-sm py-0.5 rounded-full font-bold text-[11px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">👤 Member</span>`;
+              } else {
+                badgeHTML = `<span class="inline-flex items-center gap-1 px-sm py-0.5 rounded-full font-bold text-[11px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">Reguler</span>`;
+              }
+              badgeCell.innerHTML = badgeHTML;
+            } else {
+              alert('Gagal mengubah status: ' + data.message);
+              window.location.reload();
+            }
+          })
+          .catch(() => {
+            alert('Terjadi error jaringan, silahkan coba lagi.');
+            selectEl.disabled = false;
+            window.location.reload();
+          });
       }
     </script>
   </body>

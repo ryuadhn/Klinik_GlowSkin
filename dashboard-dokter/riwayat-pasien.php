@@ -13,7 +13,53 @@
 // --- SERTAKAN FILE KONEKSI DATABASE ---
 require_once __DIR__ . '/../koneksi.php';
 
-// --- QUERY 1: DAFTAR PASIEN & DIAGNOSIS TERAKHIR ---
+// --- INITIALIZE SESSION & DYNAMIC DOCTOR SWITCHER ---
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (isset($_GET['switch_dokter'])) {
+    $sw = intval($_GET['switch_dokter']);
+    if ($sw === 1 || $sw === 2) {
+        $_SESSION['id_dokter'] = $sw;
+        // Redirect to self without switch_dokter param
+        $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
+        $params = $_GET;
+        unset($params['switch_dokter']);
+        if (!empty($params)) {
+            $clean_url .= '?' . http_build_query($params);
+        }
+        header("Location: " . $clean_url);
+        exit();
+    }
+}
+$id_dokter_login = $_SESSION['id_dokter'] ?? 1; // Default to 1 (dr. Sarah)
+
+// Fetch current doctor details from database
+try {
+    $stmt_doc = $pdo->prepare("
+        SELECT d.nama_lengkap, s.nama AS spesialisasi
+        FROM dokter d
+        JOIN ref_spesialisasi s ON d.id_spesialisasi = s.id
+        WHERE d.id_dokter = :id
+    ");
+    $stmt_doc->execute([':id' => $id_dokter_login]);
+    $doc_info = $stmt_doc->fetch(PDO::FETCH_ASSOC);
+    $nama_dokter = $doc_info['nama_lengkap'] ?? 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = $doc_info['spesialisasi'] ?? 'Spesialis Kulit & Kelamin';
+} catch (PDOException $e) {
+    $nama_dokter = 'dr. Sarah Sp.KK';
+    $spesialisasi_dokter = 'Spesialis Kulit & Kelamin';
+}
+
+// Map profile photo
+if ($id_dokter_login == 1) {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI';
+} else {
+    $foto_dokter = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc';
+}
+
+// --- QUERY 1: MENGAMBIL DAFTAR PASIEN & DIAGNOSIS TERAKHIRNYA ---
 try {
     $stmt_patients = $pdo->query("
         SELECT
@@ -46,8 +92,9 @@ try {
     $patients = [];
 }
 
-// --- QUERY 2: TIMELINE REKAM MEDIS LENGKAP ---
+// --- QUERY 2: TIMELINE REKAM MEDIS LENGKAP UNTUK SETIAP PASIEN ---
 try {
+    // JOIN data rekam medis, kunjungan, dokter, dan status kunjungan untuk dicatat di timeline kronologi
     $stmt_records = $pdo->query("
         SELECT
             rm.id_rekam_medis,
@@ -68,7 +115,7 @@ try {
     ");
     $all_records = $stmt_records->fetchAll();
     
-    // Kelompokkan data rekam medis berdasarkan id_pasien
+    // Kelompokkan data rekam medis berdasarkan id_pasien agar pemanggilan timeline pasien lebih cepat
     $patient_timelines = [];
     foreach ($all_records as $rec) {
         $patient_timelines[$rec['id_pasien']][] = $rec;
@@ -77,8 +124,9 @@ try {
     $patient_timelines = [];
 }
 
-// --- QUERY 3: RESEP OBAT UNTUK KRONOLOGI ---
+// --- QUERY 3: MENGAMBIL RESEP OBAT PADA KUNJUNGAN PASIEN ---
 try {
+    // JOIN resep_obat dengan tabel obat untuk mengambil detail nama obat & resep
     $stmt_prescriptions = $pdo->query("
         SELECT
             ro.id_kunjungan,
@@ -90,7 +138,7 @@ try {
     ");
     $all_prescriptions = $stmt_prescriptions->fetchAll();
     
-    // Kelompokkan resep obat berdasarkan id_kunjungan
+    // Kelompokkan resep obat berdasarkan id_kunjungan agar tersinkron di timeline kunjungan terkait
     $prescriptions_by_kunjungan = [];
     foreach ($all_prescriptions as $pres) {
         $prescriptions_by_kunjungan[$pres['id_kunjungan']][] = $pres;
@@ -267,13 +315,44 @@ $skin_types = ["Kombinasi / Berminyak", "Kering", "Normal", "Sensitif", "Kombina
 
           <div class="h-8 w-px bg-outline-variant"></div>
 
-          <div class="flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <p class="font-title-sm text-title-sm leading-none text-primary">dr. Sarah Wijaya, Sp.KK</p>
-              <p class="font-label-caps text-[10px] text-on-surface-variant">DOKTER SPESIALIS</p>
-            </div>
-            <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
-              <img alt="Doctor Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCizprgqdDImNl_3N10D2QU4V56cW0d9IEcu6PwfSVJ8d1EfXJIpqdOGo4heFc2roP5DOUh1SaGno_rfp1fhhOZCJgTO4GB060lETXOc1LhZ6SQglNuVrqIcVBUv8vtYPbhimTcFeXJlHuvbgaVVX6s6fvVtxN94ui8dRMkRfc8a1GNoMqQc56aczHWi0Sj3QcmQiUQqXnCAyehUUmStxNe_LST_wLpqSfcZ5lmglVgNYqEEVnmkkqFtW0sZ-Wv_2BvVXAo5ZNOFaE"/>
+          <!-- Doctor Switcher Dropdown -->
+          <div class="relative">
+            <button id="profile-menu-button" class="flex items-center gap-3 hover:bg-surface-container-low p-1.5 rounded-lg transition-all outline-none">
+              <div class="text-right hidden sm:block">
+                <p class="font-title-sm text-title-sm leading-none text-primary"><?= htmlspecialchars($nama_dokter) ?></p>
+                <p class="font-label-caps text-[10px] text-on-surface-variant"><?= htmlspecialchars($spesialisasi_dokter) ?></p>
+              </div>
+              <div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+                <img alt="Doctor Profile" class="w-full h-full object-cover" src="<?= $foto_dokter ?>"/>
+              </div>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="profile-dropdown" class="absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg hidden z-50">
+              <div class="p-2 border-b border-outline-variant">
+                <p class="text-[10px] font-label-caps text-on-surface-variant uppercase px-3 py-1">Ganti Dokter</p>
+              </div>
+              <div class="p-1 space-y-1">
+                <a href="?switch_dokter=1" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 1 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Sarah Sp.KK</p>
+                    <p class="text-[9px] text-on-surface-variant">Dermatologist</p>
+                  </div>
+                </a>
+                <a href="?switch_dokter=2" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-high transition-all <?= $id_dokter_login === 2 ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface' ?>">
+                  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xs font-semibold">dr. Adrian</p>
+                    <p class="text-[9px] text-on-surface-variant">Aesthetician</p>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -428,24 +507,6 @@ $skin_types = ["Kombinasi / Berminyak", "Kering", "Normal", "Sensitif", "Kombina
                     ID: #<?= htmlspecialchars($default_patient['kode_pasien']) ?> | Pasien Sejak: <?= $default_since ?>
                   </p>
                 </div>
-                <button class="bg-surface-container-lowest border border-outline-variant dark:border-outline px-4 py-2 rounded font-bold text-body-sm flex items-center gap-2 hover:bg-surface-container-low transition-colors shadow-sm" onclick="window.print()">
-                  <span class="material-symbols-outlined text-sm">print</span>
-                  Cetak Riwayat
-                </button>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="p-3 bg-surface-container-lowest border border-outline-variant dark:border-outline rounded shadow-sm">
-                  <p class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Alergi</p>
-                  <p class="text-body-sm font-bold text-secondary dark:text-secondary-fixed-dim" id="detail-allergy">
-                    <?= htmlspecialchars($default_patient['alergi'] ?? 'Tidak Ada') ?>
-                  </p>
-                </div>
-                <div class="p-3 bg-surface-container-lowest border border-outline-variant dark:border-outline rounded shadow-sm">
-                  <p class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Tipe Kulit</p>
-                  <p class="text-body-sm font-bold text-on-surface dark:text-inverse-on-surface" id="detail-skin">
-                    <?= $default_skin ?>
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -569,6 +630,19 @@ $skin_types = ["Kombinasi / Berminyak", "Kering", "Normal", "Sensitif", "Kombina
           dateDisplay.textContent = new Date().toLocaleDateString('id-ID', options);
         }
       });
+
+      // Profile Dropdown Toggle
+      const profileButton = document.getElementById('profile-menu-button');
+      const profileDropdown = document.getElementById('profile-dropdown');
+      if (profileButton && profileDropdown) {
+        profileButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profileDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+          profileDropdown.classList.add('hidden');
+        });
+      }
 
       document.addEventListener('DOMContentLoaded', () => {
         const searchInput = document.getElementById('search-input');

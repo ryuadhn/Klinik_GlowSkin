@@ -296,13 +296,23 @@
                 window.location.href = 'dashboard-dokter/index.php';
               }, 1000);
             } else {
-              // Credentials mismatch (simulate database query failure)
-              btnLogin.disabled = false;
-              btnLogin.innerHTML = originalContent;
+              // Send failed login details to database audit log
+              const logData = new FormData();
+              logData.append('username', username);
               
-              // Show warning alert
-              errorMessage.textContent = 'Username atau password database salah!';
-              errorAlert.classList.remove('hidden');
+              fetch('dashboard-admin/api_log_login.php', {
+                method: 'POST',
+                body: logData
+              })
+              .catch(err => console.error('Gagal mencatat log keamanan:', err))
+              .finally(() => {
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = originalContent;
+                
+                // Show warning alert
+                errorMessage.textContent = 'Username atau password database salah!';
+                errorAlert.classList.remove('hidden');
+              });
             }
           }, 1200);
         });
