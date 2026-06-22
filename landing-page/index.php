@@ -387,7 +387,7 @@ try {
     <?php endif; ?>
 
     <!-- Header / Navigation -->
-    <header class="w-full h-20 sticky top-0 z-50 bg-surface-container-lowest/80 dark:bg-inverse-surface/80 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline/30">
+    <header class="w-full h-20 sticky top-0 z-50 bg-surface-container-lowest/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/60">
       <div class="max-w-7xl mx-auto px-lg h-full flex justify-between items-center">
         <div class="flex items-center gap-sm">
           <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">spa</span>
@@ -417,9 +417,16 @@ try {
 
     <main>
       <!-- Hero Section -->
-      <section class="relative min-h-[921px] flex items-center overflow-hidden">
-        <!-- Background Decoration -->
-        <div class="absolute top-0 right-0 w-1/2 h-full opacity-10 dark:opacity-5 pointer-events-none">
+      <section class="relative min-h-[780px] flex items-center overflow-hidden">
+        <!-- Hero Background Image (Skincare Treatment) - Aligned to the right -->
+        <div class="absolute inset-y-0 right-0 w-full lg:w-[60%] z-0 pointer-events-none">
+          <img class="w-full h-full object-cover opacity-50 dark:opacity-35 lg:opacity-100 lg:dark:opacity-80 transition-all duration-700" alt="Background perawatan premium" src="../assets/images/skincare_treatment.png" />
+          <!-- Responsive Overlay to fade the left edge of the image on desktop -->
+          <div class="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-transparent/30 dark:from-inverse-surface dark:via-inverse-surface/90 lg:bg-gradient-to-r lg:from-background lg:via-background/35 lg:to-transparent lg:dark:from-inverse-surface lg:dark:via-inverse-surface/35 lg:dark:to-transparent"></div>
+        </div>
+
+        <!-- Background Decoration Blur (additional color accents) -->
+        <div class="absolute top-0 right-0 w-full h-full opacity-20 dark:opacity-10 pointer-events-none z-[1]">
           <div class="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-container blur-[120px] bg-decoration-blur"></div>
           <div class="absolute bottom-[20%] left-0 w-[400px] h-[400px] rounded-full bg-secondary-container blur-[100px] bg-decoration-blur"></div>
         </div>
@@ -446,23 +453,9 @@ try {
               </a>
             </div>
           </div>
-
-          <div class="relative hidden lg:block">
-            <div class="rounded-3xl overflow-hidden aspect-[4/5] border border-outline-variant dark:border-outline shadow-xl relative group">
-              <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Perawatan kulit premium di klinik GlowSkin oleh ahli estetika profesional" src="../assets/images/skincare_treatment.png" />
-              <div class="absolute bottom-md left-md right-md glass-card p-lg rounded-xl">
-                <div class="flex items-center gap-md">
-                  <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-on-primary">
-                    <span class="material-symbols-outlined">award_star</span>
-                  </div>
-                  <div>
-                    <p class="font-title-sm text-title-sm text-on-surface">Klinik Terpercaya</p>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Lebih dari 10.000+ pasien puas</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          
+          <!-- Right side is kept empty for the background image to show clearly on large screens -->
+          <div class="hidden lg:block"></div>
         </div>
       </section>
 
@@ -476,92 +469,138 @@ try {
             </p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
-            <!-- Service 1 -->
-            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl hover:border-primary/50 transition-all group flex flex-col h-full hover-scale">
-              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg group-hover:bg-primary group-hover:text-on-primary transition-all">
-                <span class="material-symbols-outlined text-3xl">earbuds</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+              <!-- Service 1 -->
+              <div class="bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 rounded-2xl transition-all group flex flex-col h-full hover-scale overflow-hidden shadow-sm hover:shadow-md dark:hover:shadow-[0_0_30px_rgba(79,219,200,0.08)] hover:border-teal-700/30 dark:hover:border-teal-400/30">
+                <!-- Service Image - scaled slightly to crop thin white borders -->
+                <div class="w-full aspect-[16/10] overflow-hidden bg-surface-container-low dark:bg-surface-container-high">
+                  <img class="w-full h-full object-cover scale-[1.04] transition-transform duration-700 group-hover:scale-[1.10]" alt="Terapi Laser di Klinik GlowSkin" src="../assets/images/service_laser.png" />
+                </div>
+                <!-- Service Content -->
+                <div class="p-lg flex flex-col flex-grow">
+                  <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-md group-hover:bg-primary group-hover:text-on-primary transition-all">
+                    <span class="material-symbols-outlined text-[24px]">earbuds</span>
+                  </div>
+                  <h3 class="font-title-sm text-title-sm mb-sm text-on-surface dark:text-inverse-on-surface font-extrabold">Laser Therapy</h3>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-lg flex-grow">
+                    Teknologi laser mutakhir untuk mengatasi hiperpigmentasi, bekas jerawat, dan peremajaan kulit secara presisi tanpa downtime yang lama.
+                  </p>
+                  <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="laser">
+                    Pelajari Selengkapnya
+                    <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
               </div>
-              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Laser Therapy</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-xl flex-grow">
-                Teknologi laser mutakhir untuk mengatasi hiperpigmentasi, bekas jerawat, dan peremajaan kulit secara presisi tanpa downtime yang lama.
-              </p>
-              <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="laser">
-                Pelajari Selengkapnya
-                <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
-              </div>
-            </div>
 
-            <!-- Service 2 -->
-            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl hover:border-primary/50 transition-all group flex flex-col h-full hover-scale">
-              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg group-hover:bg-primary group-hover:text-on-primary transition-all">
-                <span class="material-symbols-outlined text-3xl">face_6</span>
+              <!-- Service 2 -->
+              <div class="bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 rounded-2xl transition-all group flex flex-col h-full hover-scale overflow-hidden shadow-sm hover:shadow-md dark:hover:shadow-[0_0_30px_rgba(79,219,200,0.08)] hover:border-teal-700/30 dark:hover:border-teal-400/30">
+                <!-- Service Image - scaled slightly to crop thin white borders -->
+                <div class="w-full aspect-[16/10] overflow-hidden bg-surface-container-low dark:bg-surface-container-high">
+                  <img class="w-full h-full object-cover scale-[1.04] transition-transform duration-700 group-hover:scale-[1.10]" alt="Perawatan Facial di Klinik GlowSkin" src="../assets/images/service_facial.png" />
+                </div>
+                <!-- Service Content -->
+                <div class="p-lg flex flex-col flex-grow">
+                  <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-md group-hover:bg-primary group-hover:text-on-primary transition-all">
+                    <span class="material-symbols-outlined text-[24px]">face_6</span>
+                  </div>
+                  <h3 class="font-title-sm text-title-sm mb-sm text-on-surface dark:text-inverse-on-surface font-extrabold">Facial Treatment</h3>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-lg flex-grow">
+                    Perawatan wajah intensif yang disesuaikan dengan kebutuhan kulit Anda, mulai dari deep cleansing hingga hidrasi maksimal.
+                  </p>
+                  <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="facial">
+                    Pelajari Selengkapnya
+                    <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
               </div>
-              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Facial Treatment</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-xl flex-grow">
-                Perawatan wajah intensif yang disesuaikan dengan kebutuhan kulit Anda, mulai dari deep cleansing hingga hidrasi maksimal.
-              </p>
-              <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="facial">
-                Pelajari Selengkapnya
-                <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
-              </div>
-            </div>
 
-            <!-- Service 3 -->
-            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-xl rounded-2xl hover:border-primary/50 transition-all group flex flex-col h-full hover-scale">
-              <div class="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-lg group-hover:bg-primary group-hover:text-on-primary transition-all">
-                <span class="material-symbols-outlined text-3xl">clinical_notes</span>
-              </div>
-              <h3 class="font-title-sm text-title-sm mb-md text-on-surface dark:text-inverse-on-surface">Skincare Racikan</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-xl flex-grow">
-                Konsultasi mendalam dengan dokter spesialis untuk mendapatkan formulasi skincare yang dirancang khusus untuk profil kulit unik Anda.
-              </p>
-              <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="skincare">
-                Pelajari Selengkapnya
-                <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+              <!-- Service 3 -->
+              <div class="bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 rounded-2xl transition-all group flex flex-col h-full hover-scale overflow-hidden shadow-sm hover:shadow-md dark:hover:shadow-[0_0_30px_rgba(79,219,200,0.08)] hover:border-teal-700/30 dark:hover:border-teal-400/30">
+                <!-- Service Image - scaled slightly to crop thin white borders -->
+                <div class="w-full aspect-[16/10] overflow-hidden bg-surface-container-low dark:bg-surface-container-high">
+                  <img class="w-full h-full object-cover scale-[1.04] transition-transform duration-700 group-hover:scale-[1.10]" alt="Skincare Racikan Spesialis di Klinik GlowSkin" src="../assets/images/service_skincare.png" />
+                </div>
+                <!-- Service Content -->
+                <div class="p-lg flex flex-col flex-grow">
+                  <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-md group-hover:bg-primary group-hover:text-on-primary transition-all">
+                    <span class="material-symbols-outlined text-[24px]">clinical_notes</span>
+                  </div>
+                  <h3 class="font-title-sm text-title-sm mb-sm text-on-surface dark:text-inverse-on-surface font-extrabold">Skincare Racikan</h3>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant mb-lg flex-grow">
+                    Konsultasi mendalam dengan dokter spesialis untuk mendapatkan formulasi skincare yang dirancang khusus untuk profil kulit unik Anda.
+                  </p>
+                  <div class="btn-learn-more flex items-center gap-xs text-primary font-title-sm cursor-pointer group/link" data-service="skincare">
+                    Pelajari Selengkapnya
+                    <span class="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </section>
 
       <!-- Doctors Section -->
-      <section class="py-xl" id="doctors">
+      <section class="py-xl bg-surface-container-lowest dark:bg-inverse-surface/5" id="doctors">
         <div class="max-w-7xl mx-auto px-xl">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-xl items-center">
-            <div>
-              <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-md">Ditangani Oleh Ahlinya</h2>
-              <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant mb-lg">
-                Kesehatan kulit Anda adalah prioritas kami. Tim medis kami terdiri dari dokter spesialis kulit yang berpengalaman dan bersertifikasi internasional.
-              </p>
-              <ul class="space-y-md">
-                <li class="flex gap-md">
-                  <div class="mt-1 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-[18px]">check</span>
-                  </div>
-                  <div>
-                    <p class="font-title-sm text-title-sm text-on-surface">dr. Sarah, Sp.KK</p>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Spesialis Kulit &amp; Kelamin &mdash; Anti-Aging Expert</p>
-                  </div>
-                </li>
-                <li class="flex gap-md">
-                  <div class="mt-1 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-[18px]">check</span>
-                  </div>
-                  <div>
-                    <p class="font-title-sm text-title-sm text-on-surface">dr. Adrian, S.Ked</p>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Dokter Estetika Medis &mdash; Spesialis Laser Therapy</p>
-                  </div>
-                </li>
-              </ul>
+          <!-- Centered Header -->
+          <div class="text-center mb-xl">
+            <span class="inline-flex items-center gap-xs px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps mb-xs">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              DOKTER KAMI
+            </span>
+            <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Tim Dokter Spesialis Medis</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant max-w-2xl mx-auto">
+              Kesehatan kulit Anda ditangani oleh dokter spesialis kulit berpengalaman dan bersertifikasi internasional.
+            </p>
+          </div>
+
+          <!-- Doctors Grid Layout (Centered for 2 doctors, shrunken container) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-md max-w-xl mx-auto justify-center">
+            <!-- Doctor Card 1: dr. Sarah -->
+            <div class="bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 rounded-3xl p-3 flex flex-col justify-between shadow-md hover:shadow-lg dark:hover:shadow-[0_0_35px_rgba(79,219,200,0.15)] transition-all duration-300 relative overflow-hidden group hover:border-teal-700/30 dark:hover:border-teal-400/30">
+              <div class="relative rounded-2xl overflow-hidden aspect-square bg-surface-container-low dark:bg-surface-container-high mb-md">
+                <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="dr. Sarah, Sp.KK - Spesialis Kulit & Kelamin di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+                
+                <!-- Hover Action Arrow Button -->
+                <div class="absolute top-sm right-sm w-10 h-10 rounded-full bg-on-surface text-surface dark:bg-inverse-on-surface dark:text-inverse-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
+                  <span class="material-symbols-outlined text-[20px]">arrow_outward</span>
+                </div>
+              </div>
+              <div class="px-xs pb-xs">
+                <!-- Specialization Badge: Brand Green -->
+                <span class="inline-block px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-sm">
+                  Spesialis Kulit &amp; Kelamin
+                </span>
+                <h3 class="font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-extrabold mb-1">
+                  dr. Sarah, Sp.KK
+                </h3>
+                <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant">
+                  Anti-Aging &amp; Skin Expert
+                </p>
+              </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-md items-start">
-              <div class="rounded-2xl overflow-hidden border border-outline-variant">
-                <img class="w-full h-64 object-cover" alt="dr. Sarah, Sp.KK - Spesialis Kulit & Kelamin di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedHsWtVogRuLqa7IZRhxpnlVl7bf7oqPlJ13qcZtAxiUNk1IAqcpxkOoiBrEJCLlTtht4Xuw9YBdlwOsfrIcQwfL_I7svWDZ8IlUTm4b5ESA__67dSmEPEfRx7pWseaFDU15utK5kxpc6zqbz3vXpgPvQK-n2x1MAWv02ncy0y5fk3eo8aryvBftAEXZS6Jnt6Ss3tgxuEu4QKQgwaGk_bwP3jslqtZp4-u02z6xuD4PUmDAxGFOUaqX1NDAwnfmzQvSjR9PzNqI" />
+            <!-- Doctor Card 2: dr. Adrian -->
+            <div class="bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 rounded-3xl p-3 flex flex-col justify-between shadow-md hover:shadow-lg dark:hover:shadow-[0_0_35px_rgba(79,219,200,0.15)] transition-all duration-300 relative overflow-hidden group hover:border-teal-700/30 dark:hover:border-teal-400/30">
+              <div class="relative rounded-2xl overflow-hidden aspect-square bg-surface-container-low dark:bg-surface-container-high mb-md">
+                <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="dr. Adrian, S.Ked - Dokter Estetika Medis di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+                
+                <!-- Hover Action Arrow Button -->
+                <div class="absolute top-sm right-sm w-10 h-10 rounded-full bg-on-surface text-surface dark:bg-inverse-on-surface dark:text-inverse-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
+                  <span class="material-symbols-outlined text-[20px]">arrow_outward</span>
+                </div>
               </div>
-              <div class="rounded-2xl overflow-hidden border border-outline-variant mt-xl">
-                <img class="w-full h-64 object-cover" alt="dr. Adrian, S.Ked - Dokter Estetika Medis di Klinik GlowSkin" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnqV0hZQQyZHboUD9RM8O6NlzScyVOnO3-7r4g3zMK1pM65aD2aB5KAFOswI-qj41JeKvIqCaqfVVqks0zLotFZDxXSM68CVUHJ4YkkyN6PqO7iaj_H9JvoRQCLWvF6kyLZU_VaGMySI_JJJugcr8ZgDuU0CztzRvLm0av3bG5zXT7Fnl7bc0dUYV1SIwosc1R62DPSJ2KxccXrNHqjDztVUZhkq-Q3arqo247SfGQrguZzYxD9rYbkSTKkBf-rTW811qtgDcugc" />
+              <div class="px-xs pb-xs">
+                <!-- Specialization Badge: Brand Green -->
+                <span class="inline-block px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-sm">
+                  Dokter Estetika Medis
+                </span>
+                <h3 class="font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-extrabold mb-1">
+                  dr. Adrian, S.Ked
+                </h3>
+                <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant">
+                  Aesthetic &amp; Laser Specialist
+                </p>
               </div>
             </div>
           </div>
@@ -600,7 +639,7 @@ try {
             <div id="testi-slider" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-md md:gap-lg pb-md select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <?php if (!empty($daftar_ulasan)) : ?>
                 <?php foreach ($daftar_ulasan as $ulasan) : ?>
-                <div class="min-w-full md:min-w-[calc(50%-12px)] lg:min-w-[calc(33.333%-16px)] snap-start bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline p-md md:p-lg rounded-2xl flex flex-col justify-between hover-scale">
+                <div class="min-w-full md:min-w-[calc(50%-12px)] lg:min-w-[calc(33.333%-16px)] snap-start bg-surface dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/60 p-md rounded-2xl flex flex-col justify-between hover-scale shadow-sm dark:shadow-md dark:shadow-black/20 hover:border-teal-700/30 dark:hover:border-teal-400/30 dark:hover:shadow-[0_0_25px_rgba(79,219,200,0.06)] transition-all">
                   <div class="space-y-sm">
                     <div class="flex text-amber-400">
                       <?php for ($i = 1; $i <= 5; $i++) : ?>
@@ -615,7 +654,7 @@ try {
                       "<?= htmlspecialchars($ulasan['isi_ulasan']) ?>"
                     </p>
                   </div>
-                  <div class="flex items-center gap-sm pt-md mt-md border-t border-outline-variant/30">
+                  <div class="flex items-center gap-sm pt-md mt-md border-t border-slate-200/80 dark:border-slate-800/60">
                     <div class="w-10 h-10 rounded-full overflow-hidden border border-primary/30 bg-primary/10 flex items-center justify-center text-primary">
                       <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">person</span>
                     </div>
@@ -635,9 +674,17 @@ try {
             </div>
           </div>
 
-          <!-- Form Kirim Ulasan -->
-          <div class="mt-xl">
-            <div class="bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-2xl p-xl">
+          <!-- Toggle Review Form Button -->
+          <div class="text-center mt-lg">
+            <button type="button" id="toggle-review-form" class="inline-flex items-center gap-sm bg-primary/10 border border-teal-700/20 dark:border-teal-400/20 text-primary px-xl py-sm rounded-lg font-title-sm text-title-sm hover:bg-primary hover:text-on-primary transition-all active:scale-95 duration-300">
+              <span class="material-symbols-outlined text-[20px]">rate_review</span>
+              Tulis Ulasan Baru
+            </button>
+          </div>
+
+          <!-- Form Kirim Ulasan (Hidden by default, smooth slide animation) -->
+          <div id="review-form-wrapper" class="max-h-0 overflow-hidden opacity-0 transition-all duration-500 ease-in-out">
+            <div class="mt-lg bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-2xl p-lg">
               <div class="flex items-center gap-md mb-lg">
                 <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                   <span class="material-symbols-outlined">rate_review</span>
@@ -692,12 +739,49 @@ try {
               </form>
             </div>
           </div>
+
+          <!-- JavaScript to Toggle the review form container with a smooth slide animation -->
+          <script>
+            document.getElementById('toggle-review-form').addEventListener('click', function() {
+              const wrapper = document.getElementById('review-form-wrapper');
+              const isCollapsed = wrapper.classList.contains('opacity-0');
+              
+              if (isCollapsed) {
+                // Expand
+                wrapper.classList.remove('opacity-0');
+                wrapper.style.maxHeight = wrapper.scrollHeight + 'px';
+                wrapper.style.opacity = '1';
+                this.innerHTML = `
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                  Batal Menulis Ulasan
+                `;
+                // Change button style to neutral outline
+                this.classList.remove('bg-primary/10', 'text-primary', 'border-teal-700/20', 'dark:border-teal-400/20');
+                this.classList.add('bg-surface-container-high', 'text-on-surface-variant', 'border-slate-300', 'dark:border-slate-700');
+              } else {
+                // Collapse
+                wrapper.style.maxHeight = '0px';
+                wrapper.style.opacity = '0';
+                // Wait for the transition to finish before adding class back
+                setTimeout(() => {
+                  wrapper.classList.add('opacity-0');
+                }, 500);
+                this.innerHTML = `
+                  <span class="material-symbols-outlined text-[20px]">rate_review</span>
+                  Tulis Ulasan Baru
+                `;
+                // Change button style back to primary green
+                this.classList.remove('bg-surface-container-high', 'text-on-surface-variant', 'border-slate-300', 'dark:border-slate-700');
+                this.classList.add('bg-primary/10', 'text-primary', 'border-teal-700/20', 'dark:border-teal-400/20');
+              }
+            });
+          </script>
         </div>
       </section>
 
       <!-- FAQ Section -->
       <section class="py-xl bg-surface dark:bg-inverse-surface/10" id="faq">
-        <div class="max-w-4xl mx-auto px-xl">
+        <div class="max-w-3xl mx-auto px-xl">
           <div class="text-center mb-xl">
             <span class="px-md py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps inline-block mb-xs">FAQ</span>
             <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Pertanyaan Populer</h2>
@@ -708,56 +792,56 @@ try {
 
           <div class="space-y-md">
             <!-- FAQ 1 -->
-            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
-              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-md [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-body-md text-body-md text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
                 <span>Berapa lama waktu yang dibutuhkan untuk melihat hasil perawatan?</span>
                 <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
               </summary>
-              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+              <div class="mt-sm text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-slate-200/80 dark:border-slate-800/60 pt-sm">
                 Hasil bervariasi bergantung pada kondisi kulit individu dan jenis perawatan. Namun, untuk perawatan dasar seperti Facial Treatment, kesegaran instan dapat dirasakan langsung setelah sesi selesai. Untuk terapi laser, hasil optimal terlihat dalam 2-4 minggu setelah tindakan.
               </div>
             </details>
 
             <!-- FAQ 2 -->
-            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
-              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-md [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-body-md text-body-md text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
                 <span>Apakah krim racikan dokter GlowSkin aman dan bersertifikat BPOM?</span>
                 <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
               </summary>
-              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+              <div class="mt-sm text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-slate-200/80 dark:border-slate-800/60 pt-sm">
                 Ya, semua bahan dasar krim dan produk kami bersertifikat BPOM dan diracik secara personal berdasarkan resep khusus dokter spesialis kulit kami agar sesuai dengan profil kulit unik Anda secara aman dan terkontrol.
               </div>
             </details>
 
             <!-- FAQ 3 -->
-            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
-              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-md [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-body-md text-body-md text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
                 <span>Bagaimana cara melakukan pembatalan atau perubahan jadwal reservasi?</span>
                 <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
               </summary>
-              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+              <div class="mt-sm text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-slate-200/80 dark:border-slate-800/60 pt-sm">
                 Anda dapat menghubungi kami langsung melalui WhatsApp konfirmasi yang Anda terima setelah melakukan pendaftaran online, minimal 24 jam sebelum jadwal konsultasi dimulai.
               </div>
             </details>
 
             <!-- FAQ 4 -->
-            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
-              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-md [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-body-md text-body-md text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
                 <span>Apakah perawatan medis di GlowSkin terasa sakit?</span>
                 <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
               </summary>
-              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+              <div class="mt-sm text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-slate-200/80 dark:border-slate-800/60 pt-sm">
                 Kami mengutamakan kenyamanan pasien. Untuk perawatan medis tertentu seperti laser atau injeksi, kami menggunakan krim anestesi topikal berkualitas tinggi untuk meminimalisir rasa tidak nyaman selama tindakan berlangsung.
               </div>
             </details>
 
             <!-- FAQ 5 -->
-            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-lg [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
-              <summary class="flex justify-between items-center font-title-sm text-title-sm text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
+            <details name="faq" class="group bg-surface-container-low dark:bg-surface-container-low/50 border border-outline-variant dark:border-outline rounded-2xl p-md [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary class="flex justify-between items-center font-body-md text-body-md text-on-surface dark:text-inverse-on-surface font-bold cursor-pointer outline-none">
                 <span>Metode pembayaran apa saja yang diterima di GlowSkin?</span>
                 <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-primary">expand_more</span>
               </summary>
-              <div class="mt-md text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-outline-variant/30 pt-md">
+              <div class="mt-sm text-body-sm text-on-surface-variant dark:text-surface-variant leading-relaxed border-t border-slate-200/80 dark:border-slate-800/60 pt-sm">
                 Kami menerima pembayaran tunai, kartu debit/kredit (Visa, Mastercard, BCA, Mandiri), serta transfer bank dan QRIS. Pembayaran dilakukan di klinik setelah perawatan selesai.
               </div>
             </details>
@@ -767,77 +851,90 @@ try {
 
       <!-- Reservation Section -->
       <section class="py-xl bg-surface-container-low dark:bg-surface-container-low/10" id="reservation">
-        <div class="max-w-4xl mx-auto px-xl">
-          <div class="bg-surface-container-lowest dark:bg-inverse-surface border border-outline-variant dark:border-outline rounded-3xl p-xl shadow-sm">
-            <div class="text-center mb-xl">
-              <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Formulir Pendaftaran &amp; Janji Temu</h2>
-              <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant">Lengkapi data diri Anda untuk memulai perjalanan menuju kulit sehat impian.</p>
+        <div class="max-w-7xl mx-auto px-xl">
+          <div class="bg-surface-container-lowest dark:bg-inverse-surface border border-outline-variant dark:border-outline shadow-sm grid grid-cols-1 lg:grid-cols-12">
+            <!-- Left Side: Clinic Interior Image -->
+            <div class="hidden lg:block lg:col-span-5 relative overflow-hidden">
+              <img class="w-full h-full object-cover object-right" alt="Interior Klinik GlowSkin" src="../assets/images/clinic_interior.png" />
+              <!-- Subtle overlay for integration -->
+              <div class="absolute inset-0 bg-gradient-to-r from-transparent to-background/10 dark:to-inverse-surface/10"></div>
             </div>
 
-            <?php
-            /**
-             * ============================================================
-             * FORM PENDAFTARAN PASIEN BARU
-             * ============================================================
-             * PERUBAHAN UTAMA dari versi HTML:
-             * 1. Atribut method="POST" dan action="" (submit ke diri sendiri).
-             * 2. Setiap input diberi atribut 'name' yang sinkron dengan
-             *    variabel $_POST di blok PHP di atas.
-             * 3. Dropdown dokter menggunakan value numerik (ID dokter dari DB).
-             * ============================================================
-             */
-            ?>
-            <form class="space-y-lg" id="booking-form" method="POST" action="">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">NAMA LENGKAP</label>
-                  <!-- name="nama_lengkap" → sinkron dengan $_POST['nama_lengkap'] -->
-                  <input id="booking-name" name="nama_lengkap" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Masukkan nama lengkap Anda" required="" type="text" />
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
-                </div>
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">NOMOR WHATSAPP / HP</label>
-                  <!-- name="no_telepon" → sinkron dengan $_POST['no_telepon'] -->
-                  <input name="no_telepon" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Contoh: 08123456789" required="" type="tel" />
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
-                </div>
+            <!-- Right Side: Booking Form -->
+            <div class="lg:col-span-7 p-lg md:p-xl flex flex-col justify-center">
+              <div class="text-left mb-xl">
+                <h2 class="font-headline-md text-headline-md text-on-surface dark:text-inverse-on-surface mb-sm">Formulir Pendaftaran &amp; Janji Temu</h2>
+                <p class="font-body-md text-body-md text-on-surface-variant dark:text-surface-variant">Lengkapi data diri Anda untuk memulai perjalanan menuju kulit sehat impian.</p>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">TANGGAL LAHIR</label>
-                  <input name="tanggal_lahir" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" type="date" />
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+              <?php
+              /**
+               * ============================================================
+               * FORM PENDAFTARAN PASIEN BARU
+               * ============================================================
+               * PERUBAHAN UTAMA dari versi HTML:
+               * 1. Atribut method="POST" dan action="" (submit ke diri sendiri).
+               * 2. Setiap input diberi atribut 'name' yang sinkron dengan
+               *    variabel $_POST di blok PHP di atas.
+               * 3. Dropdown dokter menggunakan value numerik (ID dokter dari DB).
+               * ============================================================
+               */
+              ?>
+              <form class="space-y-lg" id="booking-form" method="POST" action="">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">NAMA LENGKAP</label>
+                    <!-- name="nama_lengkap" → sinkron dengan $_POST['nama_lengkap'] -->
+                    <input id="booking-name" name="nama_lengkap" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Masukkan nama lengkap Anda" required="" type="text" />
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">NOMOR WHATSAPP / HP</label>
+                    <!-- name="no_telepon" → sinkron dengan $_POST['no_telepon'] -->
+                    <input name="no_telepon" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Contoh: 08123456789" required="" type="tel" />
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
                 </div>
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">JENIS KELAMIN</label>
-                  <select name="id_jenis_kelamin" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
-                    <option disabled="" selected="" value="">Pilih jenis kelamin</option>
-                    <option value="1">Laki-laki</option>
-                    <option value="2">Perempuan</option>
-                  </select>
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
-                </div>
-              </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">KATEGORI PERAWATAN</label>
-                  <select id="booking-category" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
-                    <option disabled="" selected="" value="">Pilih kategori utama</option>
-                    <option value="laser">Laser Therapy</option>
-                    <option value="facial">Facial Treatment</option>
-                    <option value="skincare">Skincare Racikan</option>
-                  </select>
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">TANGGAL LAHIR</label>
+                    <input name="tanggal_lahir" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" type="date" />
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">JENIS KELAMIN</label>
+                    <select name="id_jenis_kelamin" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
+                      <option disabled="" selected="" value="">Pilih jenis kelamin</option>
+                      <option value="1">Laki-laki</option>
+                      <option value="2">Perempuan</option>
+                    </select>
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
                 </div>
-                <div class="space-y-xs">
-                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">DETAIL PERAWATAN</label>
-                  <select id="booking-service" name="id_layanan" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" disabled="">
-                    <option disabled="" selected="" value="">Pilih kategori dahulu</option>
-                  </select>
-                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+
+                <!-- Perawatan Category Row: Adjusted to 2 columns for space -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">KATEGORI PERAWATAN</label>
+                    <select id="booking-category" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="">
+                      <option disabled="" selected="" value="">Pilih kategori utama</option>
+                      <option value="laser">Laser Therapy</option>
+                      <option value="facial">Facial Treatment</option>
+                      <option value="skincare">Skincare Racikan</option>
+                    </select>
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
+                  <div class="space-y-xs">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">DETAIL PERAWATAN</label>
+                    <select id="booking-service" name="id_layanan" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" required="" disabled="">
+                      <option disabled="" selected="" value="">Pilih kategori dahulu</option>
+                    </select>
+                    <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                  </div>
                 </div>
+
+                <!-- Doctor Selection Row: Moved to a full-width row for better spacing -->
                 <div class="space-y-xs">
                   <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">PILIH DOKTER</label>
                   <!-- name="id_dokter" → sinkron dengan $_POST['id_dokter'] -->
@@ -850,20 +947,20 @@ try {
                   </select>
                   <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
                 </div>
-              </div>
 
-              <div class="space-y-xs">
-                <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">CATATAN KELUHAN KULIT</label>
-                <!-- name="keluhan_utama" → sinkron dengan $_POST['keluhan_utama'] -->
-                <textarea name="keluhan_utama" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Ceritakan kondisi atau keluhan kulit Anda saat ini..." rows="4"></textarea>
-                <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
-              </div>
+                <div class="space-y-xs">
+                  <label class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant ml-1">CATATAN KELUHAN KULIT</label>
+                  <!-- name="keluhan_utama" → sinkron dengan $_POST['keluhan_utama'] -->
+                  <textarea name="keluhan_utama" class="w-full bg-surface dark:bg-surface-container-low border border-outline-variant dark:border-outline rounded-lg px-md py-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none dark:text-inverse-on-surface" placeholder="Ceritakan kondisi atau keluhan kulit Anda saat ini..." rows="4"></textarea>
+                  <span class="error-msg text-error text-label-caps mt-1 hidden">Field ini wajib diisi</span>
+                </div>
 
-              <button class="w-full bg-primary text-on-primary py-md rounded-xl font-headline-md text-headline-md hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-md" type="submit">
-                <span class="material-symbols-outlined">event_available</span>
-                Daftar &amp; Booking Jadwal
-              </button>
-            </form>
+                <button class="w-full bg-primary text-on-primary py-md rounded-xl font-headline-md text-headline-md hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-md" type="submit">
+                  <span class="material-symbols-outlined">event_available</span>
+                  Daftar &amp; Booking Jadwal
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </section>

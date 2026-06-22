@@ -5,6 +5,12 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>GlowSkin Clinic - Portal Staf Login</title>
     
+    <!-- Google Fonts & Material Symbols -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
     <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="assets/js/theme-toggle.js"></script>
@@ -19,7 +25,7 @@
               "inverse-on-surface": "#eff1f3",
               "inverse-primary": "#4fdbc8",
               "primary-container": "var(--primary-container)",
-              "inverse-surface": "#2d3133",
+              "inverse-surface": "#0f172a",
               "on-secondary-fixed": "#40000d",
               "surface-container-low": "var(--surface-container-low)",
               "surface": "var(--surface)",
@@ -94,16 +100,6 @@
       };
     </script>
     <style>
-      .bg-glow {
-        background:
-          radial-gradient(ellipse at 20% 30%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
-          radial-gradient(ellipse at 80% 70%, rgba(185, 5, 56, 0.06) 0%, transparent 50%);
-      }
-      .dark .bg-glow {
-        background:
-          radial-gradient(ellipse at 20% 30%, rgba(79, 219, 200, 0.07) 0%, transparent 55%),
-          radial-gradient(ellipse at 80% 70%, rgba(185, 5, 56, 0.04) 0%, transparent 50%);
-      }
       .portal-badge {
         display: inline-flex;
         align-items: center;
@@ -126,108 +122,167 @@
         border-color: rgba(79,219,200,0.25);
         color: #4fdbc8;
       }
+      /* Glassmorphism custom card inside visual column */
+      .glass-card {
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
     </style>
   </head>
-  <body class="bg-background dark:bg-[#0f172a] text-on-surface font-body-md transition-colors duration-300 min-h-screen flex flex-col relative overflow-hidden bg-glow">
-    <!-- Top Decorative Line -->
-    <div class="h-1 w-full bg-gradient-to-r from-primary via-primary-container to-secondary-container"></div>
+  <body class="bg-background dark:bg-[#0f172a] text-on-surface font-body-md transition-colors duration-300 min-h-screen">
     
-    <!-- Header with logo and back to site -->
-    <header class="w-full px-xl py-md flex justify-between items-center z-10 border-b border-outline-variant/20">
-      <a href="landing-page/index.php" class="flex items-center gap-sm">
-        <span class="font-display-lg text-[22px] text-primary tracking-tight font-bold leading-none">GlowSkin</span>
-        <span class="portal-badge">
-          <span class="material-symbols-outlined" style="font-size:10px">admin_panel_settings</span>
-          PORTAL STAF
-        </span>
-      </a>
-      <div class="flex items-center gap-md">
-        <!-- Theme Toggle Button -->
-        <button class="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-all" id="theme-toggle" title="Ganti tema">
-          <span class="material-symbols-outlined hidden text-[20px]" id="dark-icon">light_mode</span>
-          <span class="material-symbols-outlined text-[20px]" id="light-icon">dark_mode</span>
-        </button>
-        <a class="flex items-center gap-xs text-body-sm text-on-surface-variant hover:text-primary transition-colors border border-outline-variant/60 hover:border-primary/40 rounded-full px-md py-1.5" href="landing-page/index.php">
-          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span class="text-xs font-medium">Kembali ke Situs</span>
-        </a>
-      </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-1 flex items-center justify-center px-md py-xl z-10">
-      <div class="w-full max-w-[460px] animate-fade-in-up">
-        <!-- Glassmorphism Card -->
-        <div class="bg-[#ffffff]/80 dark:bg-[#0b1329]/80 border border-outline-variant/60 dark:border-slate-800 backdrop-blur-xl p-xl rounded-3xl shadow-2xl space-y-xl">
-          <div class="text-center space-y-sm">
-            <h2 class="font-display-lg text-[28px] font-bold text-on-surface">Selamat Datang</h2>
-            <p class="text-body-sm text-on-surface-variant">Silakan masuk dengan kredensial staf sistem database Anda.</p>
-          </div>
-
-          <!-- Alert error wrapper -->
-          <div class="hidden p-3 bg-red-100 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-sm" id="error-alert">
-            <span class="material-symbols-outlined text-sm">error</span>
-            <span id="error-message">Username atau password salah!</span>
-          </div>
-
-          <!-- Form block -->
-          <form class="space-y-lg" id="login-form">
-            <!-- Username Input -->
-            <div class="space-y-sm">
-              <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Username Staf</label>
-              <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">person</span>
-                <input class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan username..." type="text" id="username" required autocomplete="username" />
-              </div>
-            </div>
-
-            <!-- Password Input -->
-            <div class="space-y-sm">
-              <div class="flex justify-between items-center">
-                <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Password</label>
-                <a href="#" class="text-[10px] font-label-caps text-primary hover:underline uppercase tracking-wider" onclick="alert('Silakan hubungi Super Admin/IT Clinic untuk reset password database Anda.')">Lupa Password?</a>
-              </div>
-              <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
-                <input class="w-full pl-10 pr-12 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan password..." type="password" id="password" required autocomplete="current-password" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" id="password-toggle">
-                  <span class="material-symbols-outlined text-[20px]" id="password-icon">visibility</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Select Role Hint dropdown -->
-            <div class="p-md bg-surface-container-low dark:bg-[#0f172a]/80 border border-outline-variant/60 dark:border-slate-800/60 rounded-xl space-y-sm shadow-inner">
-              <div class="flex items-center gap-sm text-primary dark:text-primary-fixed-dim">
-                <span class="material-symbols-outlined text-sm">database</span>
-                <span class="font-label-caps text-[10px] uppercase font-bold tracking-wider">Saran Kredensial Database Demo</span>
-              </div>
-              <div class="grid grid-cols-2 gap-md pt-sm">
-                <button type="button" class="text-left text-xs p-sm rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant dark:border-slate-800 bg-[#ffffff] dark:bg-[#0b1329] transition-colors" onclick="fillDemo('admin', 'admin123')">
-                  <p class="font-bold text-on-surface">Super Admin</p>
-                  <p class="text-[10px] text-on-surface-variant">admin / admin123</p>
-                </button>
-                <button type="button" class="text-left text-xs p-sm rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant dark:border-slate-800 bg-[#ffffff] dark:bg-[#0b1329] transition-colors" onclick="fillDemo('dokter', 'dokter123')">
-                  <p class="font-bold text-on-surface">Dokter</p>
-                  <p class="text-[10px] text-on-surface-variant">dokter / dokter123</p>
-                </button>
-              </div>
-            </div>
-
-            <!-- Login Action Button -->
-            <button class="w-full bg-primary text-on-primary py-3 rounded-xl font-title-sm hover:brightness-110 transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/10" type="submit" id="btn-login">
-              <span class="material-symbols-outlined text-[20px]">login</span>
-              <span>Masuk ke Konsol</span>
+    <div class="grid grid-cols-1 lg:grid-cols-12 min-h-screen">
+      
+      <!-- Left Column: Form Section -->
+      <div class="lg:col-span-5 flex flex-col justify-between p-lg md:p-xl bg-white dark:bg-[#0b1329] border-r border-outline-variant/30 dark:border-slate-800/40 relative z-10">
+        
+        <!-- Header inside left column -->
+        <header class="flex justify-between items-center w-full">
+          <a href="landing-page/index.php" class="flex items-center gap-sm">
+            <span class="font-display-lg text-[22px] text-primary tracking-tight font-extrabold leading-none">GlowSkin</span>
+            <span class="portal-badge">
+              <span class="material-symbols-outlined" style="font-size:10px">admin_panel_settings</span>
+              PORTAL STAF
+            </span>
+          </a>
+          <div class="flex items-center gap-md">
+            <!-- Theme Toggle Button -->
+            <button class="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-all" id="theme-toggle" title="Ganti tema">
+              <span class="material-symbols-outlined hidden text-[20px]" id="dark-icon">light_mode</span>
+              <span class="material-symbols-outlined text-[20px]" id="light-icon">dark_mode</span>
             </button>
-          </form>
-        </div>
-      </div>
-    </main>
+            <a class="flex items-center gap-xs text-body-sm text-on-surface-variant hover:text-primary transition-colors border border-outline-variant/60 hover:border-primary/40 rounded-full px-md py-1.5" href="landing-page/index.php">
+              <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span class="text-xs font-medium">Kembali</span>
+            </a>
+          </div>
+        </header>
 
-    <!-- Footer Copyright -->
-    <footer class="w-full text-center py-md text-xs text-on-surface-variant/40 border-t border-outline-variant/20 z-10">
-      <p>&copy; 2026 Klinik Pratama GlowSkin &bull; Tugas Sistem Basis Data &bull; Hak Cipta Dilindungi</p>
-    </footer>
+        <!-- Form container (Vertically Centered) -->
+        <div class="flex-1 flex flex-col justify-center py-lg max-w-[400px] w-full mx-auto">
+          <div class="space-y-lg">
+            <div class="space-y-xs">
+              <h2 class="font-display-lg text-[32px] font-extrabold text-on-surface tracking-tight leading-tight">Selamat Datang</h2>
+              <p class="text-body-sm text-on-surface-variant leading-relaxed">Silakan masuk dengan kredensial staf sistem database Anda.</p>
+            </div>
+
+            <!-- Alert error wrapper -->
+            <div class="hidden p-3 bg-red-100 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-sm" id="error-alert">
+              <span class="material-symbols-outlined text-sm">error</span>
+              <span id="error-message">Username atau password salah!</span>
+            </div>
+
+            <!-- Form block -->
+            <form class="space-y-md" id="login-form">
+              <!-- Username Input -->
+              <div class="space-y-xs">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Username Staf</label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">person</span>
+                  <input class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan username..." type="text" id="username" required autocomplete="username" />
+                </div>
+              </div>
+
+              <!-- Password Input -->
+              <div class="space-y-xs">
+                <div class="flex justify-between items-center">
+                  <label class="block font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Password</label>
+                  <a href="#" class="text-[10px] font-label-caps text-primary hover:underline uppercase tracking-wider font-bold" onclick="alert('Silakan hubungi Super Admin/IT Clinic untuk reset password database Anda.')">Lupa Password?</a>
+                </div>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
+                  <input class="w-full pl-10 pr-12 py-2.5 bg-surface-container-low dark:bg-surface border border-outline-variant rounded-xl text-body-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-on-surface" placeholder="Masukkan password..." type="password" id="password" required autocomplete="current-password" />
+                  <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" id="password-toggle">
+                    <span class="material-symbols-outlined text-[20px]" id="password-icon">visibility</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Select Role Hint dropdown -->
+              <div class="p-sm bg-surface-container-low dark:bg-[#0f172a]/50 border border-outline-variant/40 dark:border-slate-800/40 rounded-xl space-y-sm shadow-inner">
+                <div class="flex items-center gap-sm text-primary dark:text-primary-fixed-dim">
+                  <span class="material-symbols-outlined text-sm">database</span>
+                  <span class="font-label-caps text-[10px] uppercase font-bold tracking-wider">Saran Kredensial Database Demo</span>
+                </div>
+                <div class="grid grid-cols-2 gap-sm pt-xs">
+                  <button type="button" class="text-left text-xs p-2 rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant/60 dark:border-slate-800 bg-[#ffffff] dark:bg-[#0b1329] transition-colors" onclick="fillDemo('admin', 'admin123')">
+                    <p class="font-bold text-on-surface text-[11px]">Super Admin</p>
+                    <p class="text-[9px] text-on-surface-variant">admin / admin123</p>
+                  </button>
+                  <button type="button" class="text-left text-xs p-2 rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 border border-outline-variant/60 dark:border-slate-800 bg-[#ffffff] dark:bg-[#0b1329] transition-colors" onclick="fillDemo('dokter', 'dokter123')">
+                    <p class="font-bold text-on-surface text-[11px]">Dokter</p>
+                    <p class="text-[9px] text-on-surface-variant">dokter / dokter123</p>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Login Action Button -->
+              <button class="w-full bg-primary text-on-primary py-3 rounded-xl font-title-sm hover:brightness-110 transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/10" type="submit" id="btn-login">
+                <span class="material-symbols-outlined text-[20px]">login</span>
+                <span>Masuk ke Konsol</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Footer inside left column -->
+        <footer class="text-xs text-on-surface-variant/40 pt-md border-t border-outline-variant/10">
+          <p>&copy; 2026 Klinik Pratama GlowSkin &bull; SBD</p>
+        </footer>
+
+      </div>
+
+      <!-- Right Column: Visual Section -->
+      <div class="lg:col-span-7 relative hidden lg:flex flex-col justify-between p-xl overflow-hidden min-h-screen">
+        
+        <!-- Background Image with Gradient Overlay -->
+        <div class="absolute inset-0 z-0">
+          <img src="assets/images/clinic_login_banner.png" class="w-full h-full object-cover" alt="Clinic interior" />
+          <!-- Base dark overlay to make white text pop against the bright clinic image -->
+          <div class="absolute inset-0 bg-[#0f172a]/55"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0f172a]/90 via-transparent to-transparent"></div>
+        </div>
+
+        <!-- Upper Overlay Text -->
+        <div class="relative z-10 max-w-xl">
+          <h1 class="font-display-lg text-[40px] font-extrabold text-white leading-tight drop-shadow-md">
+            Pancarkan Pesona Kulit <span class="text-[#4fdbc8]">Sehat</span> &amp; Bersinar Alami.
+          </h1>
+          <p class="text-slate-250 text-body-md mt-md max-w-md drop-shadow-sm text-slate-100">
+            Dukung pelayanan kecantikan medis terbaik dengan pengelolaan rekam medis dan data kunjungan pasien klinik secara profesional dan terintegrasi.
+          </p>
+        </div>
+
+        <!-- Bottom Testimonial / Story Card -->
+        <div class="relative z-10 max-w-md align-end self-start">
+          <div class="glass-card p-lg rounded-2xl text-white shadow-2xl space-y-sm">
+            <div class="flex items-center gap-sm">
+              <div class="w-8 h-8 rounded-full bg-[#4fdbc8]/20 flex items-center justify-center text-[#4fdbc8]">
+                <span class="material-symbols-outlined text-sm">spa</span>
+              </div>
+              <span class="font-label-caps text-[10px] tracking-wider font-extrabold text-[#4fdbc8] uppercase font-bold">Clinical Excellence</span>
+            </div>
+            <p class="text-body-sm text-slate-100 italic leading-relaxed">
+              "Kenyamanan, privasi, dan standar medis tertinggi adalah prioritas utama kami untuk mewujudkan keindahan kulit alami setiap pasien."
+            </p>
+            <div class="pt-sm flex justify-between items-center border-t border-white/10">
+              <div>
+                <p class="text-xs font-bold text-white">dr. Sarah, Sp.KK</p>
+                <p class="text-[10px] text-slate-300">Anti-Aging &amp; Skin Expert</p>
+              </div>
+              <a href="landing-page/index.php#doctors" class="inline-flex items-center gap-xs text-[10px] text-[#4fdbc8] font-extrabold hover:underline">
+                Lihat Tim Medis
+                <span class="material-symbols-outlined text-xs">arrow_forward</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
 
     <!-- Scripts -->
     <script>

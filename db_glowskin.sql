@@ -140,6 +140,7 @@ CREATE TABLE obat (
     stok            INT NOT NULL DEFAULT 0,
     stok_minimum    INT NOT NULL DEFAULT 10,
     tanggal_kadaluarsa DATE,
+    gambar_url      VARCHAR(255) DEFAULT NULL,
     is_active       BOOLEAN DEFAULT TRUE,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_kategori) REFERENCES kategori_obat(id)

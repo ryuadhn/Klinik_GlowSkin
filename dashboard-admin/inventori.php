@@ -27,12 +27,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($id_obat > 0 && !empty($nama_obat)) {
             try {
-                $stmt_update = $pdo->prepare("
-                    UPDATE obat 
-                    SET nama_obat = ?, stok = ?, harga_jual = ?, stok_minimum = ? 
-                    WHERE id_obat = ?
-                ");
-                $stmt_update->execute([$nama_obat, $stok, $harga_jual, $stok_minimum, $id_obat]);
+                // File upload handling
+                $gambar_url = null;
+                $has_new_image = false;
+                if (isset($_FILES['gambar_file']) && $_FILES['gambar_file']['error'] === UPLOAD_ERR_OK) {
+                    $file_tmp = $_FILES['gambar_file']['tmp_name'];
+                    $file_name = $_FILES['gambar_file']['name'];
+                    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    if (in_array($file_ext, $allowed_exts)) {
+                        $upload_dir = __DIR__ . '/../assets/images/products/';
+                        if (!is_dir($upload_dir)) {
+                            mkdir($upload_dir, 0755, true);
+                        }
+                        
+                        // Fetch kode_obat for naming
+                        $stmt_code = $pdo->prepare("SELECT kode_obat FROM obat WHERE id_obat = ?");
+                        $stmt_code->execute([$id_obat]);
+                        $kode_obat = $stmt_code->fetchColumn() ?: 'OBT';
+                        
+                        $new_file_name = $kode_obat . '_' . time() . '.' . $file_ext;
+                        $dest_path = $upload_dir . $new_file_name;
+                        
+                        if (move_uploaded_file($file_tmp, $dest_path)) {
+                            $gambar_url = 'assets/images/products/' . $new_file_name;
+                            $has_new_image = true;
+                        }
+                    }
+                }
+
+                if ($has_new_image) {
+                    $stmt_update = $pdo->prepare("
+                        UPDATE obat 
+                        SET nama_obat = ?, stok = ?, harga_jual = ?, stok_minimum = ?, gambar_url = ? 
+                        WHERE id_obat = ?
+                    ");
+                    $stmt_update->execute([$nama_obat, $stok, $harga_jual, $stok_minimum, $gambar_url, $id_obat]);
+                } else {
+                    $stmt_update = $pdo->prepare("
+                        UPDATE obat 
+                        SET nama_obat = ?, stok = ?, harga_jual = ?, stok_minimum = ? 
+                        WHERE id_obat = ?
+                    ");
+                    $stmt_update->execute([$nama_obat, $stok, $harga_jual, $stok_minimum, $id_obat]);
+                }
                 $pesan_sukses = "Produk '{$nama_obat}' berhasil diperbarui!";
             } catch (PDOException $e) {
                 $pesan_error = "Gagal memperbarui produk: " . $e->getMessage();
@@ -52,11 +90,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if (!empty($kode_obat) && !empty($nama_obat) && $id_kategori > 0 && !empty($satuan)) {
             try {
+                // File upload handling
+                $gambar_url = null;
+                if (isset($_FILES['gambar_file']) && $_FILES['gambar_file']['error'] === UPLOAD_ERR_OK) {
+                    $file_tmp = $_FILES['gambar_file']['tmp_name'];
+                    $file_name = $_FILES['gambar_file']['name'];
+                    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    if (in_array($file_ext, $allowed_exts)) {
+                        $upload_dir = __DIR__ . '/../assets/images/products/';
+                        if (!is_dir($upload_dir)) {
+                            mkdir($upload_dir, 0755, true);
+                        }
+                        $new_file_name = $kode_obat . '_' . time() . '.' . $file_ext;
+                        $dest_path = $upload_dir . $new_file_name;
+                        if (move_uploaded_file($file_tmp, $dest_path)) {
+                            $gambar_url = 'assets/images/products/' . $new_file_name;
+                        }
+                    }
+                }
+
                 $stmt_insert = $pdo->prepare("
-                    INSERT INTO obat (kode_obat, nama_obat, id_kategori, satuan, harga_jual, harga_beli, stok, stok_minimum)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO obat (kode_obat, nama_obat, id_kategori, satuan, harga_jual, harga_beli, stok, stok_minimum, gambar_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt_insert->execute([$kode_obat, $nama_obat, $id_kategori, $satuan, $harga_jual, $harga_beli, $stok, $stok_minimum]);
+                $stmt_insert->execute([$kode_obat, $nama_obat, $id_kategori, $satuan, $harga_jual, $harga_beli, $stok, $stok_minimum, $gambar_url]);
                 $pesan_sukses = "Produk baru '{$nama_obat}' ({$kode_obat}) berhasil ditambahkan!";
             } catch (PDOException $e) {
                 $pesan_error = "Gagal menambahkan produk baru: " . $e->getMessage();
@@ -75,7 +133,13 @@ if (!function_exists('formatRupiah')) {
 }
 
 // --- FUNGSI HELPER: GAMBAR PRODUK BERDASARKAN KODE ---
-function getProductImage($kode_obat) {
+function getProductImage($kode_obat, $gambar_url = null) {
+    if (!empty($gambar_url)) {
+        if (strpos($gambar_url, 'http://') === 0 || strpos($gambar_url, 'https://') === 0) {
+            return $gambar_url;
+        }
+        return '../' . $gambar_url;
+    }
     switch ($kode_obat) {
         case 'OBT-004': // Acne Facial Wash
         case 'GS-CLS-001': // Gentle Foaming Cleanser
@@ -125,7 +189,7 @@ try {
 // --- QUERY DAFTAR PRODUK (TABLE) ---
 try {
     $products = $pdo->query("
-        SELECT o.id_obat, o.kode_obat, o.nama_obat, o.stok, o.stok_minimum, o.harga_jual, k.nama_kategori
+        SELECT o.id_obat, o.kode_obat, o.nama_obat, o.stok, o.stok_minimum, o.harga_jual, o.gambar_url, k.nama_kategori
         FROM obat o
         JOIN kategori_obat k ON o.id_kategori = k.id
         WHERE o.is_active = TRUE
@@ -353,7 +417,7 @@ try {
           <p class="text-on-surface-variant font-body-md mt-1">Kelola stok produk, pembaruan harga, dan pantau ketersediaan barang secara real-time.</p>
         </div>
         <div class="flex items-center gap-3">
-          <button id="btn-tambah-produk" class="flex items-center gap-2 px-lg py-3 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps hover:brightness-110 transition-all">
+          <button id="btn-tambah-produk" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps hover:brightness-110 transition-all whitespace-nowrap h-fit self-start md:self-end shadow-sm">
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
             Tambah Produk Baru
           </button>
@@ -483,7 +547,7 @@ try {
                   <td class="px-lg py-4">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-lg bg-surface dark:bg-slate-900 border border-outline-variant dark:border-slate-800 overflow-hidden flex-shrink-0">
-                        <img class="w-full h-full object-cover" alt="<?= htmlspecialchars($product['nama_obat']) ?>" src="<?= getProductImage($product['kode_obat']) ?>" />
+                        <img class="w-full h-full object-cover" alt="<?= htmlspecialchars($product['nama_obat']) ?>" src="<?= getProductImage($product['kode_obat'], $product['gambar_url']) ?>" />
                       </div>
                       <span class="font-body-md font-medium text-on-surface dark:text-slate-100"><?= htmlspecialchars($product['nama_obat']) ?></span>
                     </div>
@@ -512,7 +576,8 @@ try {
                               data-nama="<?= htmlspecialchars($product['nama_obat']) ?>" 
                               data-stok="<?= $product['stok'] ?>" 
                               data-harga="<?= (int)$product['harga_jual'] ?>"
-                              data-minimum="<?= $product['stok_minimum'] ?>">
+                              data-minimum="<?= $product['stok_minimum'] ?>"
+                              data-gambar="<?= htmlspecialchars($product['gambar_url'] ?? '') ?>">
                         <span class="material-symbols-outlined text-[20px]">edit</span>
                       </button>
                       <button class="p-2 text-on-surface-variant dark:text-slate-400 hover:text-secondary dark:hover:text-red-400 transition-colors">
@@ -551,7 +616,7 @@ try {
 
   <!-- Modal Edit Produk (Popup Form) -->
   <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
-    <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-3xl w-full max-w-md p-xl shadow-2xl transform scale-95 transition-transform duration-300 relative">
+    <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-3xl w-full max-w-3xl p-xl shadow-2xl transform scale-95 transition-transform duration-300 relative">
       <button id="close-edit-modal" class="absolute top-md right-md text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors flex items-center p-xs rounded-full hover:bg-surface-container-low dark:hover:bg-slate-800">
         <span class="material-symbols-outlined text-[24px]">close</span>
       </button>
@@ -561,35 +626,62 @@ try {
         Edit Data Skincare
       </h3>
       
-      <form method="POST" action="" class="space-y-md">
+      <form method="POST" action="" enctype="multipart/form-data" class="space-y-md">
         <input type="hidden" name="action" value="edit_product">
         <input type="hidden" name="id_obat" id="edit-id">
         
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Nama Produk</label>
-          <input type="text" name="nama_obat" id="edit-nama" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
-        
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Unit</label>
-          <input type="number" name="stok" id="edit-stok" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
-        
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Jual (Rp)</label>
-          <input type="number" name="harga_jual" id="edit-harga" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+          <!-- Left Column: Details -->
+          <div class="space-y-md">
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Nama Produk</label>
+              <input type="text" name="nama_obat" id="edit-nama" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
+            
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Unit</label>
+              <input type="number" name="stok" id="edit-stok" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
+            
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Jual (Rp)</label>
+              <input type="number" name="harga_jual" id="edit-harga" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
 
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Minimum (Batas Restok)</label>
-          <input type="number" name="stok_minimum" id="edit-minimum" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Minimum (Batas Restok)</label>
+              <input type="number" name="stok_minimum" id="edit-minimum" min="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
+          </div>
+
+          <!-- Right Column: Image Uploader -->
+          <div class="space-y-md flex flex-col justify-between">
+            <!-- Drag-and-drop File Upload Container for Edit -->
+            <div class="space-y-xs flex-1 flex flex-col justify-start">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Foto Produk Skincare (Drag &amp; Drop atau Pilih Baru)</label>
+              
+              <div id="edit-dropzone" class="flex-grow min-h-[180px] border-2 border-dashed border-outline-variant dark:border-slate-700 hover:border-primary dark:hover:border-primary rounded-2xl flex flex-col items-center justify-center p-md cursor-pointer transition-colors bg-surface-container-low/50 dark:bg-slate-900/50 relative overflow-hidden group">
+                <input type="file" name="gambar_file" id="edit-file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20">
+                
+                <!-- Inner placeholder container -->
+                <div id="edit-dropzone-placeholder" class="text-center space-y-2 z-10 pointer-events-none group-hover:scale-105 transition-transform duration-300">
+                  <span class="material-symbols-outlined text-4xl text-primary/70 dark:text-primary-fixed-dim/70">cloud_upload</span>
+                  <p class="text-xs font-semibold text-on-surface dark:text-slate-200">Geser file ke sini atau klik untuk mengganti foto</p>
+                  <p class="text-[10px] text-on-surface-variant dark:text-slate-400">Format PNG, JPG, JPEG, atau WebP</p>
+                </div>
+
+                <!-- Preview container (displays current image first, then changes on upload) -->
+                <img id="edit-image-preview" src="#" alt="Preview" class="absolute inset-0 w-full h-full object-contain hidden z-10 bg-surface dark:bg-slate-800 p-2">
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div class="flex gap-md pt-lg border-t border-outline-variant/30 dark:border-slate-800 mt-lg">
-          <button type="button" id="close-edit-modal-btn" class="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl font-title-sm text-body-md hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-center">
+        <div class="flex gap-md pt-lg border-t border-outline-variant/30 dark:border-slate-800 mt-lg justify-end">
+          <button type="button" id="close-edit-modal-btn" class="px-6 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl font-title-sm text-body-md hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-center min-w-[120px]">
             Batal
           </button>
-          <button type="submit" class="flex-1 py-3 bg-primary text-on-primary rounded-xl font-title-sm text-body-md hover:brightness-110 transition-all text-center">
+          <button type="submit" class="px-6 py-3 bg-primary text-on-primary rounded-xl font-title-sm text-body-md hover:brightness-110 transition-all text-center min-w-[150px]">
             Simpan Perubahan
           </button>
         </div>
@@ -599,7 +691,7 @@ try {
 
   <!-- Modal Tambah Produk Baru (Popup Form) -->
   <div id="add-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
-    <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-3xl w-full max-w-md p-xl shadow-2xl transform scale-95 transition-transform duration-300 relative">
+    <div class="bg-surface-container-lowest dark:bg-[#1e293b] border border-outline-variant/30 dark:border-slate-800 rounded-3xl w-full max-w-3xl p-xl shadow-2xl transform scale-95 transition-transform duration-300 relative">
       <button id="close-add-modal" class="absolute top-md right-md text-on-surface-variant dark:text-slate-400 hover:text-primary transition-colors flex items-center p-xs rounded-full hover:bg-surface-container-low dark:hover:bg-slate-800">
         <span class="material-symbols-outlined text-[24px]">close</span>
       </button>
@@ -609,60 +701,87 @@ try {
         Tambah Produk Baru
       </h3>
       
-      <form method="POST" action="" class="space-y-md">
+      <form method="POST" action="" enctype="multipart/form-data" class="space-y-md">
         <input type="hidden" name="action" value="add_product">
         
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Kode Produk</label>
-          <input type="text" name="kode_obat" placeholder="Contoh: OBT-006" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+          <!-- Left Column: Product Details -->
+          <div class="space-y-md">
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Kode Produk</label>
+              <input type="text" name="kode_obat" placeholder="Contoh: OBT-006" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
 
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Nama Produk</label>
-          <input type="text" name="nama_obat" placeholder="Nama produk skincare" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Nama Produk</label>
+              <input type="text" name="nama_obat" placeholder="Nama produk skincare" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
 
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Kategori</label>
-          <select name="id_kategori" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer" required>
-            <?php foreach ($categories as $cat) : ?>
-              <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Kategori</label>
+              <select name="id_kategori" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer" required>
+                <?php foreach ($categories as $cat) : ?>
+                  <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
 
-        <div class="space-y-xs">
-          <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Satuan</label>
-          <input type="text" name="satuan" placeholder="Contoh: tube, bottle, pcs" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-        </div>
-
-        <div class="grid grid-cols-2 gap-md">
-          <div class="space-y-xs">
-            <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Beli (Rp)</label>
-            <input type="number" name="harga_beli" min="0" placeholder="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            <div class="space-y-xs">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Satuan</label>
+              <input type="text" name="satuan" placeholder="Contoh: tube, bottle, pcs" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-sm">
+              <div class="space-y-xs">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Awal</label>
+                <input type="number" name="stok" min="0" value="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+              </div>
+              <div class="space-y-xs">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Minimum</label>
+                <input type="number" name="stok_minimum" min="0" value="10" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+              </div>
+            </div>
           </div>
-          <div class="space-y-xs">
-            <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Jual (Rp)</label>
-            <input type="number" name="harga_jual" min="0" placeholder="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-2 gap-md">
-          <div class="space-y-xs">
-            <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Awal</label>
-            <input type="number" name="stok" min="0" value="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
-          </div>
-          <div class="space-y-xs">
-            <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Stok Minimum</label>
-            <input type="number" name="stok_minimum" min="0" value="10" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-md text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+          <!-- Right Column: Price & Drag-and-drop Image Uploader -->
+          <div class="space-y-md flex flex-col justify-between">
+            <div class="grid grid-cols-2 gap-sm">
+              <div class="space-y-xs">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Beli (Rp)</label>
+                <input type="number" name="harga_beli" min="0" placeholder="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+              </div>
+              <div class="space-y-xs">
+                <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Harga Jual (Rp)</label>
+                <input type="number" name="harga_jual" min="0" placeholder="0" class="w-full bg-surface dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-lg p-3 text-body-sm text-on-surface dark:text-slate-100 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" required>
+              </div>
+            </div>
+
+            <!-- Drag-and-drop File Upload Container -->
+            <div class="space-y-xs flex-1 flex flex-col justify-start">
+              <label class="block font-label-caps text-[10px] text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">Foto Produk Skincare (Drag &amp; Drop atau Pilih)</label>
+              
+              <div id="add-dropzone" class="flex-grow min-h-[140px] border-2 border-dashed border-outline-variant dark:border-slate-700 hover:border-primary dark:hover:border-primary rounded-2xl flex flex-col items-center justify-center p-md cursor-pointer transition-colors bg-surface-container-low/50 dark:bg-slate-900/50 relative overflow-hidden group">
+                <input type="file" name="gambar_file" id="add-file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20">
+                
+                <!-- Inner placeholder container -->
+                <div id="add-dropzone-placeholder" class="text-center space-y-2 z-10 pointer-events-none group-hover:scale-105 transition-transform duration-300">
+                  <span class="material-symbols-outlined text-4xl text-primary/70 dark:text-primary-fixed-dim/70">cloud_upload</span>
+                  <p class="text-xs font-semibold text-on-surface dark:text-slate-200">Geser file ke sini atau klik untuk mencari</p>
+                  <p class="text-[10px] text-on-surface-variant dark:text-slate-400">Hanya format PNG, JPG, JPEG, atau WebP</p>
+                </div>
+
+                <!-- Preview container -->
+                <img id="add-image-preview" src="#" alt="Preview" class="absolute inset-0 w-full h-full object-contain hidden z-10 bg-surface dark:bg-slate-800 p-2">
+              </div>
+            </div>
           </div>
         </div>
         
-        <div class="flex gap-md pt-lg border-t border-outline-variant/30 dark:border-slate-800 mt-lg">
-          <button type="button" id="close-add-modal-btn" class="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl font-title-sm text-body-md hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-center">
+        <div class="flex gap-md pt-lg border-t border-outline-variant/30 dark:border-slate-800 mt-lg justify-end">
+          <button type="button" id="close-add-modal-btn" class="px-6 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl font-title-sm text-body-md hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-center min-w-[120px]">
             Batal
           </button>
-          <button type="submit" class="flex-1 py-3 bg-primary text-on-primary rounded-xl font-title-sm text-body-md hover:brightness-110 transition-all text-center">
+          <button type="submit" class="px-6 py-3 bg-primary text-on-primary rounded-xl font-title-sm text-body-md hover:brightness-110 transition-all text-center min-w-[150px]">
             Tambah Produk
           </button>
         </div>
@@ -731,6 +850,8 @@ try {
       const editModal = document.getElementById('edit-modal');
       const closeEditModalBtn = document.getElementById('close-edit-modal');
       const closeEditModalBtn2 = document.getElementById('close-edit-modal-btn');
+      const editImagePreview = document.getElementById('edit-image-preview');
+      const editPlaceholder = document.getElementById('edit-dropzone-placeholder');
 
       function closeEditModal() {
         editModal.classList.add('opacity-0');
@@ -750,12 +871,28 @@ try {
           const stok = this.getAttribute('data-stok');
           const harga = this.getAttribute('data-harga');
           const minimum = this.getAttribute('data-minimum');
+          const gambar = this.getAttribute('data-gambar');
 
           document.getElementById('edit-id').value = id;
           document.getElementById('edit-nama').value = nama;
           document.getElementById('edit-stok').value = stok;
           document.getElementById('edit-harga').value = harga;
           document.getElementById('edit-minimum').value = minimum;
+
+          // Update image preview in Edit Modal
+          if (gambar && gambar !== '') {
+            if (gambar.startsWith('http://') || gambar.startsWith('https://')) {
+              editImagePreview.src = gambar;
+            } else {
+              editImagePreview.src = '../' + gambar;
+            }
+            editImagePreview.classList.remove('hidden');
+            editPlaceholder.classList.add('hidden');
+          } else {
+            editImagePreview.src = '#';
+            editImagePreview.classList.add('hidden');
+            editPlaceholder.classList.remove('hidden');
+          }
 
           editModal.classList.remove('hidden');
           setTimeout(() => {
@@ -770,8 +907,16 @@ try {
       const openAddModalBtn = document.getElementById('btn-tambah-produk');
       const closeAddModalBtn = document.getElementById('close-add-modal');
       const closeAddModalBtn2 = document.getElementById('close-add-modal-btn');
+      const addImagePreview = document.getElementById('add-image-preview');
+      const addPlaceholder = document.getElementById('add-dropzone-placeholder');
 
       function openAddModal() {
+        // Reset uploader in Add Modal on open
+        document.getElementById('add-file-input').value = '';
+        addImagePreview.src = '#';
+        addImagePreview.classList.add('hidden');
+        addPlaceholder.classList.remove('hidden');
+
         addModal.classList.remove('hidden');
         setTimeout(() => {
           addModal.classList.remove('opacity-0');
@@ -790,6 +935,73 @@ try {
       openAddModalBtn?.addEventListener('click', openAddModal);
       closeAddModalBtn?.addEventListener('click', closeAddModal);
       closeAddModalBtn2?.addEventListener('click', closeAddModal);
+
+      // File input change preview handlers
+      const addDropzone = document.getElementById('add-dropzone');
+      const addFileInput = document.getElementById('add-file-input');
+
+      if (addDropzone && addFileInput) {
+        addFileInput.addEventListener('dragenter', () => {
+          addDropzone.classList.add('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        addFileInput.addEventListener('dragover', () => {
+          addDropzone.classList.add('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        addFileInput.addEventListener('dragleave', () => {
+          addDropzone.classList.remove('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        addFileInput.addEventListener('drop', () => {
+          addDropzone.classList.remove('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+      }
+
+      const editDropzone = document.getElementById('edit-dropzone');
+      const editFileInput = document.getElementById('edit-file-input');
+
+      if (editDropzone && editFileInput) {
+        editFileInput.addEventListener('dragenter', () => {
+          editDropzone.classList.add('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        editFileInput.addEventListener('dragover', () => {
+          editDropzone.classList.add('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        editFileInput.addEventListener('dragleave', () => {
+          editDropzone.classList.remove('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+        editFileInput.addEventListener('drop', () => {
+          editDropzone.classList.remove('border-primary', 'bg-primary/5', 'dark:bg-primary-fixed-dim/5');
+        });
+      }
+
+      addFileInput?.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            addImagePreview.src = e.target.result;
+            addImagePreview.classList.remove('hidden');
+            addPlaceholder.classList.add('hidden');
+          };
+          reader.readAsDataURL(file);
+        } else {
+          addImagePreview.src = '#';
+          addImagePreview.classList.add('hidden');
+          addPlaceholder.classList.remove('hidden');
+        }
+      });
+
+      editFileInput?.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            editImagePreview.src = e.target.result;
+            editImagePreview.classList.remove('hidden');
+            editPlaceholder.classList.add('hidden');
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     })();
   </script>
 </body>
